@@ -1,0 +1,68 @@
+import type { EnemyState, MapGeometry, TowerDifficulty, TowerState, TowerType } from '../types';
+import { TOWER_DIFFICULTY_TO_TYPE } from '../config/gameConfig';
+import { cellCenter, Grid, worldToGrid } from '../map/Grid';
+import { hasLineOfSight } from '../map/LineOfSight';
+import type { FlowField } from '../pathfinding/FlowField';
+import { getTowerStats } from '../pathfinding/ThreatMap';
+
+export function createTower(id: number, gridX: number, gridY: number, type: TowerType): TowerState {
+    return { id, gridX, gridY, type, level: 1, cooldownMs: 0 };
+}
+
+export function towerTypeForDifficulty(difficulty: TowerDifficulty): TowerType {
+    return TOWER_DIFFICULTY_TO_TYPE[difficulty];
+}
+
+export function getUpgradeQuestionDifficulty(nextLevel: number): TowerDifficulty {
+    if (nextLevel <= 2) {
+        return 'easy';
+    }
+    if (nextLevel === 3) {
+        return 'medium';
+    }
+    if (nextLevel === 4) {
+        return 'hard';
+    }
+    return 'veryHard';
+}
+
+export function canUpgradeTower(tower: TowerState): boolean {
+    return tower.level < 5;
+}
+
+export function upgradeTower(tower: TowerState): boolean {
+    if (!canUpgradeTower(tower)) {
+        return false;
+    }
+    tower.level += 1;
+    tower.cooldownMs = Math.min(tower.cooldownMs, getTowerStats(tower).cooldownMs * 0.5);
+    return true;
+}
+
+export function selectTowerTarget(tower: TowerState, enemies: readonly EnemyState[], grid: Grid, geometry: MapGeometry, flowField: FlowField): EnemyState | undefined {
+    const stats = getTowerStats(tower);
+    const towerCenter = cellCenter({ x: tower.gridX, y: tower.gridY }, geometry);
+    let bestEnemy: EnemyState | undefined;
+    let bestCost = Number.POSITIVE_INFINITY;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    for (const enemy of enemies) {
+        if (enemy.health <= 0) {
+            continue;
+        }
+        const enemyPosition = { x: enemy.x, y: enemy.y };
+        const distance = Math.hypot(enemy.x - towerCenter.x, enemy.y - towerCenter.y);
+        if (distance > stats.range || !hasLineOfSight(grid, towerCenter, enemyPosition, geometry)) {
+            continue;
+        }
+        const enemyCell = worldToGrid(enemyPosition, grid, geometry);
+        const baseCost = enemyCell ? flowField.costToBase[enemyCell.y][enemyCell.x] : Number.POSITIVE_INFINITY;
+        if (baseCost < bestCost || (baseCost === bestCost && distance < bestDistance)) {
+            bestEnemy = enemy;
+            bestCost = baseCost;
+            bestDistance = distance;
+        }
+    }
+
+    return bestEnemy;
+}
