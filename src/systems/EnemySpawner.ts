@@ -9,7 +9,7 @@ export class EnemySpawner {
     private spawnTimerMs = 0;
     private nextEnemyId = 1;
 
-    constructor(private readonly spawns: readonly GridPoint[], private readonly geometry: MapGeometry, private readonly rng: SeededRandom) {}
+    constructor(private readonly spawns: readonly GridPoint[], private readonly geometry: MapGeometry, private readonly rng: SeededRandom) { }
 
     update(deltaMs: number): EnemyState[] {
         this.elapsedSeconds += deltaMs / 1000;
