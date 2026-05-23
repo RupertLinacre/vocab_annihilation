@@ -103,15 +103,12 @@ export class BottomPanel {
     private showQuestion(action: PendingAction): void {
         this.clearPendingClose();
         this.hideBuildMenu();
-        this.panel.classList.add('is-open');
+        this.panel.classList.remove('is-open');
+        this.kicker.textContent = 'Ready';
+        this.title.textContent = 'Select a buildable square';
+        this.body.innerHTML = '';
         this.pendingAction = action;
         this.currentQuestion = this.vocab.createQuestion(action.difficulty);
-        this.kicker.textContent = DIFFICULTY_LABELS[action.difficulty];
-        this.title.textContent = action.kind === 'build' ? 'Choose the word' : `Upgrade question`;
-        this.body.innerHTML = '';
-        const definition = this.createParagraph('definition', this.currentQuestion.definition);
-        const instruction = this.createParagraph('meta-line', 'Answer choices are shown beside your pointer.');
-        this.body.append(definition, instruction, this.createParagraph('feedback', ''));
         this.showAnswerPopup();
     }
 
@@ -122,8 +119,8 @@ export class BottomPanel {
         const correct = choice === this.currentQuestion.correctWord;
         this.callbacks.onAnswered(correct);
         if (correct) {
-            const feedback = this.createParagraph('feedback good', 'Correct');
-            this.body.append(feedback);
+            this.buildMenu.append(this.createParagraph('feedback good', 'Correct'));
+            this.buildMenu.style.pointerEvents = 'none';
             if (this.pendingAction.kind === 'build') {
                 this.callbacks.onBuild(this.pendingAction.cell, this.pendingAction.difficulty);
             } else {
@@ -135,11 +132,16 @@ export class BottomPanel {
         }
 
         const action = this.pendingAction;
-        this.body.innerHTML = '';
-        this.body.append(this.createParagraph('feedback bad', `Wrong. Correct answer: ${this.currentQuestion.correctWord}.`));
+        this.hideBuildMenu();
+        this.buildMenu.append(this.createParagraph('feedback bad', `Wrong. Correct answer: ${this.currentQuestion.correctWord}.`));
         const retry = this.createButton('primary-button', 'Try another question', 'retry-question');
         retry.addEventListener('click', () => this.showQuestion(action));
-        this.body.append(retry);
+        this.buildMenu.append(retry);
+        this.buildMenu.hidden = false;
+        this.buildMenu.classList.add('is-open');
+        if (this.popupAnchor) {
+            this.positionBuildMenu(this.popupAnchor);
+        }
     }
 
     private resetPanel(): void {
@@ -158,6 +160,7 @@ export class BottomPanel {
         this.buildMenu.innerHTML = '';
         this.buildMenu.style.left = '';
         this.buildMenu.style.top = '';
+        this.buildMenu.style.pointerEvents = '';
     }
 
     private showAnswerPopup(): void {
@@ -177,6 +180,8 @@ export class BottomPanel {
         closeButton.addEventListener('click', () => this.close());
         header.append(heading, closeButton);
 
+        const definition = this.createParagraph('definition popup-definition', this.currentQuestion.definition);
+
         const row = this.createDiv('build-popup-actions answer-popup-actions');
         this.currentQuestion.choices.forEach((choice) => {
             const button = this.createButton('choice-button', choice, 'answer-button');
@@ -185,7 +190,7 @@ export class BottomPanel {
             row.append(button);
         });
 
-        this.buildMenu.append(header, row);
+        this.buildMenu.append(header, definition, row);
         this.buildMenu.hidden = false;
         this.buildMenu.classList.add('is-open');
         this.positionBuildMenu(this.popupAnchor);
