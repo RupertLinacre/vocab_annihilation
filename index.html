@@ -17,13 +17,10 @@
                 <span>Kills <strong data-stat="kills">0</strong></span>
                 <span>Vocab <strong data-stat="accuracy">0/0</strong></span>
             </section>
-            <section id="bottom-panel" class="bottom-panel" aria-live="polite" data-testid="bottom-panel">
-                <div class="panel-head">
-                    <div>
-                        <p class="panel-kicker" data-panel-kicker>Ready</p>
-                        <h1 data-panel-title>Select a buildable square</h1>
-                    </div>
-                    <button class="icon-button" type="button" data-panel-close aria-label="Close panel">×</button>
+            <section id="bottom-panel" class="bottom-panel is-open" aria-live="polite" data-testid="bottom-panel">
+                <div class="panel-toggle-row">
+                    <button class="icon-button panel-toggle" type="button" data-panel-toggle data-testid="panel-toggle"
+                        aria-label="Collapse difficulty panel" aria-expanded="true">↓</button>
                 </div>
                 <div class="panel-body" data-panel-body></div>
             </section>

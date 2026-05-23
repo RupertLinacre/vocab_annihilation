@@ -1,12 +1,16 @@
 import { DIFFICULTY_LABELS, TOWER_LABELS } from '../config/gameConfig';
-import type { GridPoint, TowerDifficulty, TowerState, Vec2, VocabQuestion } from '../types';
-import { getTowerStats } from '../pathfinding/ThreatMap';
+import { SeededRandom } from '../core/SeededRandom';
 import { canUpgradeTower, getUpgradeQuestionDifficulty } from '../entities/Tower';
+import { getTowerStats } from '../pathfinding/ThreatMap';
 import { VocabQuestionSystem } from '../systems/VocabQuestionSystem';
+import type { GridPoint, TowerDifficulty, TowerState, Vec2, VocabQuestion } from '../types';
 
 const BUILD_DIFFICULTIES: TowerDifficulty[] = ['easy', 'medium', 'hard', 'veryHard'];
+const BUILD_SELECTIONS = [...BUILD_DIFFICULTIES, 'random'] as const;
 const BUILD_MENU_PADDING = 12;
 const BUILD_MENU_OFFSET = 14;
+
+export type BuildDifficultySelection = (typeof BUILD_SELECTIONS)[number];
 
 interface BottomPanelCallbacks {
     onBuild: (cell: GridPoint, difficulty: TowerDifficulty) => void;
@@ -22,91 +26,68 @@ type PendingAction =
 export class BottomPanel {
     private readonly frame = document.querySelector<HTMLElement>('#game-frame')!;
     private readonly panel = document.querySelector<HTMLElement>('[data-testid="bottom-panel"]')!;
-    private readonly kicker = document.querySelector<HTMLElement>('[data-panel-kicker]')!;
-    private readonly title = document.querySelector<HTMLElement>('[data-panel-title]')!;
     private readonly body = document.querySelector<HTMLElement>('[data-panel-body]')!;
-    private readonly closeButton = document.querySelector<HTMLButtonElement>('[data-panel-close]')!;
+    private readonly toggleButton = document.querySelector<HTMLButtonElement>('[data-panel-toggle]')!;
     private readonly buildMenu: HTMLElement;
     private closeTimeoutId: number | undefined;
     private popupAnchor: Vec2 | undefined;
     private currentQuestion: VocabQuestion | undefined;
     private pendingAction: PendingAction | undefined;
+    private selectedBuildDifficulty: BuildDifficultySelection = 'easy';
+    private panelExpanded = true;
 
-    constructor(private readonly vocab: VocabQuestionSystem, private readonly callbacks: BottomPanelCallbacks) {
+    constructor(private readonly vocab: VocabQuestionSystem, private readonly rng: SeededRandom, private readonly callbacks: BottomPanelCallbacks) {
         this.buildMenu = document.createElement('section');
         this.buildMenu.className = 'build-popup';
         this.buildMenu.dataset.testid = 'build-popup';
         this.buildMenu.hidden = true;
         this.frame.append(this.buildMenu);
-        this.closeButton.addEventListener('click', () => this.close());
-        this.close();
+        this.toggleButton.addEventListener('click', () => this.setExpanded(!this.panelExpanded));
+        this.renderDifficultySelector();
+        this.setExpanded(true);
     }
 
     openBuild(cell: GridPoint, anchor: Vec2): void {
         this.clearPendingClose();
-        this.resetPanel();
         this.popupAnchor = anchor;
-        this.hideBuildMenu();
-
-        const header = this.createDiv('build-popup-header');
-        const heading = this.createDiv('build-popup-head');
-        heading.append(this.createParagraph('panel-kicker build-popup-kicker', `Cell ${cell.x + 1}, ${cell.y + 1}`));
-        const title = document.createElement('h2');
-        title.textContent = 'Build tower';
-        heading.append(title);
-
-        const closeButton = this.createButton('icon-button build-popup-close', '×', 'build-popup-close');
-        closeButton.setAttribute('aria-label', 'Close build menu');
-        closeButton.addEventListener('click', () => this.close());
-        header.append(heading, closeButton);
-
-        const meta = this.createParagraph('meta-line', 'Pick a difficulty close to the square, then answer its vocabulary question.');
-        const row = this.createDiv('build-popup-actions');
-        BUILD_DIFFICULTIES.forEach((difficulty) => {
-            const button = this.createButton('difficulty-button', DIFFICULTY_LABELS[difficulty], `build-${difficulty}`);
-            button.addEventListener('click', () => this.showQuestion({ kind: 'build', cell, difficulty }));
-            row.append(button);
-        });
-
-        this.buildMenu.append(header, meta, row);
-        this.buildMenu.hidden = false;
-        this.buildMenu.classList.add('is-open');
-        this.positionBuildMenu(anchor);
+        this.showQuestion({ kind: 'build', cell, difficulty: this.resolveBuildDifficulty() });
     }
 
     openUpgrade(tower: TowerState, anchor: Vec2): void {
         this.clearPendingClose();
-        this.hideBuildMenu();
-        const stats = getTowerStats(tower);
-        this.resetPanel();
         this.popupAnchor = anchor;
         if (!canUpgradeTower(tower)) {
-            this.panel.classList.add('is-open');
-            this.kicker.textContent = TOWER_LABELS[tower.type];
-            this.title.textContent = `Level ${tower.level} tower`;
-            this.body.append(this.createParagraph('meta-line', `Range ${Math.round(stats.range)} px. Fire interval ${Math.round(stats.cooldownMs)} ms.`));
-            this.body.append(this.createParagraph('feedback good', 'Maximum level reached.'));
+            const stats = getTowerStats(tower);
+            this.showMessagePopup(
+                TOWER_LABELS[tower.type],
+                `Level ${tower.level} tower`,
+                `Range ${Math.round(stats.range)} px. Fire interval ${Math.round(stats.cooldownMs)} ms.`,
+                'Maximum level reached.',
+            );
             return;
         }
+
         const nextLevel = tower.level + 1;
-        const difficulty = getUpgradeQuestionDifficulty(nextLevel);
-        this.showQuestion({ kind: 'upgrade', tower, difficulty });
+        this.showQuestion({ kind: 'upgrade', tower, difficulty: getUpgradeQuestionDifficulty(nextLevel) });
     }
 
     close(): void {
         this.clearPendingClose();
-        this.resetPanel();
         this.hideBuildMenu();
+        this.popupAnchor = undefined;
+        this.currentQuestion = undefined;
+        this.pendingAction = undefined;
         this.callbacks.onClose();
+    }
+
+    setSelectedBuildDifficulty(selection: BuildDifficultySelection): void {
+        this.selectedBuildDifficulty = selection;
+        this.renderDifficultySelector();
     }
 
     private showQuestion(action: PendingAction): void {
         this.clearPendingClose();
         this.hideBuildMenu();
-        this.panel.classList.remove('is-open');
-        this.kicker.textContent = 'Ready';
-        this.title.textContent = 'Select a buildable square';
-        this.body.innerHTML = '';
         this.pendingAction = action;
         this.currentQuestion = this.vocab.createQuestion(action.difficulty);
         this.showAnswerPopup();
@@ -116,6 +97,7 @@ export class BottomPanel {
         if (!this.currentQuestion || !this.pendingAction) {
             return;
         }
+
         const correct = choice === this.currentQuestion.correctWord;
         this.callbacks.onAnswered(correct);
         if (correct) {
@@ -144,16 +126,6 @@ export class BottomPanel {
         }
     }
 
-    private resetPanel(): void {
-        this.panel.classList.remove('is-open');
-        this.kicker.textContent = 'Ready';
-        this.title.textContent = 'Select a buildable square';
-        this.body.innerHTML = '';
-        this.popupAnchor = undefined;
-        this.currentQuestion = undefined;
-        this.pendingAction = undefined;
-    }
-
     private hideBuildMenu(): void {
         this.buildMenu.classList.remove('is-open');
         this.buildMenu.hidden = true;
@@ -171,9 +143,6 @@ export class BottomPanel {
         const header = this.createDiv('build-popup-header');
         const heading = this.createDiv('build-popup-head');
         heading.append(this.createParagraph('panel-kicker build-popup-kicker', DIFFICULTY_LABELS[this.currentQuestion.difficulty]));
-        const title = document.createElement('h2');
-        title.textContent = 'Pick the word';
-        heading.append(title);
 
         const closeButton = this.createButton('icon-button build-popup-close', '×', 'answer-popup-close');
         closeButton.setAttribute('aria-label', 'Close answers');
@@ -181,7 +150,6 @@ export class BottomPanel {
         header.append(heading, closeButton);
 
         const definition = this.createParagraph('definition popup-definition', this.currentQuestion.definition);
-
         const row = this.createDiv('build-popup-actions answer-popup-actions');
         this.currentQuestion.choices.forEach((choice) => {
             const button = this.createButton('choice-button', choice, 'answer-button');
@@ -194,6 +162,67 @@ export class BottomPanel {
         this.buildMenu.hidden = false;
         this.buildMenu.classList.add('is-open');
         this.positionBuildMenu(this.popupAnchor);
+    }
+
+    private showMessagePopup(kicker: string, titleText: string, detail: string, message: string): void {
+        if (!this.popupAnchor) {
+            return;
+        }
+
+        this.hideBuildMenu();
+
+        const header = this.createDiv('build-popup-header');
+        const heading = this.createDiv('build-popup-head');
+        heading.append(this.createParagraph('panel-kicker build-popup-kicker', kicker));
+        const title = document.createElement('h2');
+        title.textContent = titleText;
+        heading.append(title);
+
+        const closeButton = this.createButton('icon-button build-popup-close', '×', 'message-popup-close');
+        closeButton.setAttribute('aria-label', 'Close details');
+        closeButton.addEventListener('click', () => this.close());
+        header.append(heading, closeButton);
+
+        this.buildMenu.append(
+            header,
+            this.createParagraph('meta-line', detail),
+            this.createParagraph('feedback good', message),
+        );
+        this.buildMenu.hidden = false;
+        this.buildMenu.classList.add('is-open');
+        this.positionBuildMenu(this.popupAnchor);
+    }
+
+    private renderDifficultySelector(): void {
+        this.body.innerHTML = '';
+        const row = this.createDiv('button-row difficulty-selector-row');
+        BUILD_SELECTIONS.forEach((selection) => {
+            const isSelected = selection === this.selectedBuildDifficulty;
+            const label = selection === 'random' ? 'Random' : DIFFICULTY_LABELS[selection];
+            const button = this.createButton(
+                `difficulty-button difficulty-selector-button${isSelected ? ' is-selected' : ''}`,
+                label,
+                `select-${selection}`,
+            );
+            button.setAttribute('aria-pressed', String(isSelected));
+            button.addEventListener('click', () => this.setSelectedBuildDifficulty(selection));
+            row.append(button);
+        });
+        this.body.append(row);
+    }
+
+    private resolveBuildDifficulty(): TowerDifficulty {
+        return this.selectedBuildDifficulty === 'random'
+            ? this.rng.choice(BUILD_DIFFICULTIES)
+            : this.selectedBuildDifficulty;
+    }
+
+    private setExpanded(expanded: boolean): void {
+        this.panelExpanded = expanded;
+        this.panel.classList.toggle('is-open', expanded);
+        this.toggleButton.textContent = expanded ? '↓' : '↑';
+        this.toggleButton.setAttribute('aria-expanded', String(expanded));
+        this.toggleButton.setAttribute('aria-label', expanded ? 'Collapse difficulty panel' : 'Expand difficulty panel');
     }
 
     private clearPendingClose(): void {

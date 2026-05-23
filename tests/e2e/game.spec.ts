@@ -12,6 +12,7 @@ declare global {
         vocabAnnihilation?: {
             getFirstBuildableCell: () => BuildableCell | null;
             getTowerCount: () => number;
+            getTowerTypes: () => string[];
             getEnemyCount: () => number;
             getEnemySnapshot: () => { id: number; x: number; y: number; health: number }[];
             getBaseHealth: () => number;
@@ -47,22 +48,36 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     const screenshot = await page.locator('canvas').screenshot();
     expect(screenshot.byteLength).toBeGreaterThan(1000);
 
+    await expect(page.locator('[data-testid="bottom-panel"]')).toHaveClass(/is-open/);
+    await page.getByTestId('panel-toggle').click();
+    await expect(page.locator('[data-testid="bottom-panel"]')).not.toHaveClass(/is-open/);
+    await page.getByTestId('panel-toggle').click();
+    await expect(page.locator('[data-testid="bottom-panel"]')).toHaveClass(/is-open/);
+
+    for (const [key, testId] of [['1', 'select-easy'], ['2', 'select-medium'], ['3', 'select-hard'], ['4', 'select-veryHard'], ['5', 'select-random']] as const) {
+        await page.keyboard.press(key);
+        await expect(page.getByTestId(testId)).toHaveAttribute('aria-pressed', 'true');
+    }
+
+    await page.keyboard.press('3');
+
     const buildable = await page.evaluate(() => window.vocabAnnihilation!.getFirstBuildableCell());
     expect(buildable).not.toBeNull();
     await clickGamePoint(page, buildable!.worldX, buildable!.worldY);
     await expect(page.getByTestId('build-popup')).toBeVisible();
-
-    await page.getByTestId('build-easy').click();
-    await expect(page.getByTestId('build-popup')).toBeVisible();
-    await expect(page.locator('[data-testid="bottom-panel"]')).not.toHaveClass(/is-open/);
     await expect(page.locator('[data-testid="build-popup"] .definition')).toBeVisible();
+    await expect(page.getByText('Pick the word')).toHaveCount(0);
     await page.locator('[data-testid="answer-button"][data-correct="true"]').click();
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getTowerCount())).toBe(1);
+    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getTowerTypes())).toEqual(['missile']);
 
-    await clickGamePoint(page, buildable!.worldX, buildable!.worldY);
+    const secondBuildable = await page.evaluate(() => window.vocabAnnihilation!.getFirstBuildableCell());
+    expect(secondBuildable).not.toBeNull();
+    await clickGamePoint(page, secondBuildable!.worldX, secondBuildable!.worldY);
     await expect(page.getByTestId('build-popup')).toBeVisible();
-    await expect(page.locator('[data-testid="bottom-panel"]')).not.toHaveClass(/is-open/);
     await expect(page.locator('[data-testid="answer-button"]')).toHaveCount(3);
+    await page.locator('[data-testid="answer-button"][data-correct="true"]').click();
+    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getTowerTypes())).toEqual(['missile', 'missile']);
 
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getEnemyCount())).toBeGreaterThan(0);
     const firstEnemyPosition = await page.evaluate(() => window.vocabAnnihilation!.getEnemySnapshot()[0]);

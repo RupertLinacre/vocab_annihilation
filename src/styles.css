@@ -89,16 +89,25 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  min-height: 188px;
-  padding: 14px 18px 16px;
+  min-height: 0;
+  padding: 8px 18px 16px;
   border-top: 1px solid var(--line);
   background: var(--panel);
-  transform: translateY(calc(100% - 42px));
+  transform: translateY(calc(100% - 48px));
   transition: transform 160ms ease-out;
 }
 
 .bottom-panel.is-open {
   transform: translateY(0);
+}
+
+.panel-toggle-row {
+  display: flex;
+  justify-content: center;
+}
+
+.panel-toggle {
+  border-radius: 999px;
 }
 
 .build-popup {
@@ -134,6 +143,14 @@ body {
 .build-popup-head {
   display: grid;
   gap: 2px;
+}
+
+.panel-kicker {
+  margin: 0 0 2px;
+  color: var(--amber);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .build-popup-head h2 {
@@ -183,29 +200,6 @@ body {
   }
 }
 
-.panel-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-  min-height: 30px;
-}
-
-.panel-kicker {
-  margin: 0 0 2px;
-  color: var(--amber);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.panel-head h1 {
-  margin: 0;
-  font-size: clamp(18px, 1.7vw, 24px);
-  font-weight: 800;
-  letter-spacing: 0;
-}
-
 .icon-button,
 .choice-button,
 .primary-button,
@@ -229,7 +223,7 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 12px;
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 .button-row,
@@ -250,6 +244,22 @@ body {
 .difficulty-button {
   min-width: 138px;
   text-align: left;
+}
+
+.difficulty-selector-row {
+  justify-content: center;
+}
+
+.difficulty-selector-button {
+  flex: 1 1 160px;
+  max-width: 220px;
+  text-align: center;
+}
+
+.difficulty-selector-button.is-selected {
+  border-color: rgba(243, 182, 75, 0.72);
+  background: rgba(243, 182, 75, 0.18);
+  color: #fff8df;
 }
 
 .choice-button {

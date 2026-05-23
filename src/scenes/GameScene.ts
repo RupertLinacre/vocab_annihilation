@@ -13,7 +13,7 @@ import { EnemySpawner } from '../systems/EnemySpawner';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
 import { TowerSystem } from '../systems/TowerSystem';
 import { VocabQuestionSystem } from '../systems/VocabQuestionSystem';
-import { BottomPanel } from '../ui/BottomPanel';
+import { BottomPanel, type BuildDifficultySelection } from '../ui/BottomPanel';
 import type { EnemyState, GridPoint, ProjectileState, TerrainType, TowerDifficulty, TowerState, TowerType, Vec2 } from '../types';
 
 const SPRITE_PATHS = {
@@ -65,6 +65,14 @@ const ENEMY_TEXTURES = {
     3: { run: SPRITE_PATHS.monster3Run, stop: SPRITE_PATHS.monster3Stop, hurt: SPRITE_PATHS.monster3Hurt },
     4: { run: SPRITE_PATHS.monster4Run, stop: SPRITE_PATHS.monster4Stop, hurt: SPRITE_PATHS.monster4Hurt },
 } as const;
+
+const BUILD_SHORTCUTS: Record<string, BuildDifficultySelection> = {
+    '1': 'easy',
+    '2': 'medium',
+    '3': 'hard',
+    '4': 'veryHard',
+    '5': 'random',
+};
 
 type EnemyTextureTier = keyof typeof ENEMY_TEXTURES;
 type EnemyTextureState = keyof (typeof ENEMY_TEXTURES)[EnemyTextureTier];
@@ -131,7 +139,7 @@ export class GameScene extends Phaser.Scene {
         this.debugGraphics = this.add.graphics().setDepth(5);
         this.createMapSprites();
         this.spawner = new EnemySpawner(this.generatedMap.spawns, GAME_CONFIG.map, new SeededRandom(`${seed}:spawns`));
-        this.panel = new BottomPanel(new VocabQuestionSystem(new SeededRandom(`${seed}:vocab`)), {
+        this.panel = new BottomPanel(new VocabQuestionSystem(new SeededRandom(`${seed}:vocab`)), new SeededRandom(`${seed}:panel`), {
             onBuild: (cell, difficulty) => this.buildTower(cell, difficulty),
             onUpgrade: (tower) => this.upgradeExistingTower(tower),
             onAnswered: (correct) => this.recordAnswer(correct),
@@ -259,6 +267,14 @@ export class GameScene extends Phaser.Scene {
 
     private registerDebugKeys(): void {
         const keyboard = this.input.keyboard;
+        keyboard?.on('keydown', (event: KeyboardEvent) => {
+            const selection = BUILD_SHORTCUTS[event.key];
+            if (!selection) {
+                return;
+            }
+            this.panel.setSelectedBuildDifficulty(selection);
+            event.preventDefault();
+        });
         keyboard?.on('keydown-G', () => { this.debug.grid = !this.debug.grid; });
         keyboard?.on('keydown-R', () => { this.debug.ranges = !this.debug.ranges; });
         keyboard?.on('keydown-F', () => { this.debug.flow = !this.debug.flow; });
@@ -567,6 +583,7 @@ export class GameScene extends Phaser.Scene {
                 return null;
             },
             getTowerCount: () => this.towers.length,
+            getTowerTypes: () => this.towers.map((tower) => tower.type),
             getEnemyCount: () => this.enemies.length,
             getEnemySnapshot: () => this.enemies.map((enemy) => ({ id: enemy.id, x: enemy.x, y: enemy.y, health: enemy.health })),
             getBaseHealth: () => this.baseHealth,
