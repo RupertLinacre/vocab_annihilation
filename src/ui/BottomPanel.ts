@@ -1,8 +1,12 @@
 import { DIFFICULTY_LABELS, TOWER_LABELS } from '../config/gameConfig';
-import type { GridPoint, TowerDifficulty, TowerState, VocabQuestion } from '../types';
+import type { GridPoint, TowerDifficulty, TowerState, Vec2, VocabQuestion } from '../types';
 import { getTowerStats } from '../pathfinding/ThreatMap';
 import { canUpgradeTower, getUpgradeQuestionDifficulty } from '../entities/Tower';
 import { VocabQuestionSystem } from '../systems/VocabQuestionSystem';
+
+const BUILD_DIFFICULTIES: TowerDifficulty[] = ['easy', 'medium', 'hard', 'veryHard'];
+const BUILD_MENU_PADDING = 12;
+const BUILD_MENU_OFFSET = 14;
 
 interface BottomPanelCallbacks {
     onBuild: (cell: GridPoint, difficulty: TowerDifficulty) => void;
@@ -16,36 +20,61 @@ type PendingAction =
     | { kind: 'upgrade'; tower: TowerState; difficulty: TowerDifficulty };
 
 export class BottomPanel {
+    private readonly frame = document.querySelector<HTMLElement>('#game-frame')!;
     private readonly panel = document.querySelector<HTMLElement>('[data-testid="bottom-panel"]')!;
     private readonly kicker = document.querySelector<HTMLElement>('[data-panel-kicker]')!;
     private readonly title = document.querySelector<HTMLElement>('[data-panel-title]')!;
     private readonly body = document.querySelector<HTMLElement>('[data-panel-body]')!;
     private readonly closeButton = document.querySelector<HTMLButtonElement>('[data-panel-close]')!;
+    private readonly buildMenu: HTMLElement;
     private currentQuestion: VocabQuestion | undefined;
     private pendingAction: PendingAction | undefined;
 
     constructor(private readonly vocab: VocabQuestionSystem, private readonly callbacks: BottomPanelCallbacks) {
+        this.buildMenu = document.createElement('section');
+        this.buildMenu.className = 'build-popup';
+        this.buildMenu.dataset.testid = 'build-popup';
+        this.buildMenu.hidden = true;
+        this.frame.append(this.buildMenu);
         this.closeButton.addEventListener('click', () => this.close());
         this.close();
     }
 
-    openBuild(cell: GridPoint): void {
-        this.panel.classList.add('is-open');
-        this.kicker.textContent = `Cell ${cell.x + 1}, ${cell.y + 1}`;
-        this.title.textContent = 'Build tower';
-        this.body.innerHTML = '';
-        const meta = this.createParagraph('meta-line', 'Choose a tower difficulty, then answer its vocabulary question.');
-        const row = this.createDiv('button-row');
-        (['easy', 'medium', 'hard', 'veryHard'] as TowerDifficulty[]).forEach((difficulty) => {
+    openBuild(cell: GridPoint, anchor: Vec2): void {
+        this.resetPanel();
+        this.hideBuildMenu();
+
+        const header = this.createDiv('build-popup-header');
+        const heading = this.createDiv('build-popup-head');
+        heading.append(this.createParagraph('panel-kicker build-popup-kicker', `Cell ${cell.x + 1}, ${cell.y + 1}`));
+        const title = document.createElement('h2');
+        title.textContent = 'Build tower';
+        heading.append(title);
+
+        const closeButton = this.createButton('icon-button build-popup-close', '×', 'build-popup-close');
+        closeButton.setAttribute('aria-label', 'Close build menu');
+        closeButton.addEventListener('click', () => this.close());
+        header.append(heading, closeButton);
+
+        const meta = this.createParagraph('meta-line', 'Pick a difficulty close to the square, then answer its vocabulary question.');
+        const row = this.createDiv('build-popup-actions');
+        BUILD_DIFFICULTIES.forEach((difficulty) => {
             const button = this.createButton('difficulty-button', DIFFICULTY_LABELS[difficulty], `build-${difficulty}`);
             button.addEventListener('click', () => this.showQuestion({ kind: 'build', cell, difficulty }));
             row.append(button);
         });
-        this.body.append(meta, row);
+
+        this.buildMenu.append(header, meta, row);
+        this.buildMenu.hidden = false;
+        this.buildMenu.classList.add('is-open');
+        this.positionBuildMenu(anchor);
     }
 
     openUpgrade(tower: TowerState): void {
+        this.hideBuildMenu();
         this.panel.classList.add('is-open');
+        this.currentQuestion = undefined;
+        this.pendingAction = undefined;
         const stats = getTowerStats(tower);
         this.kicker.textContent = TOWER_LABELS[tower.type];
         this.title.textContent = `Level ${tower.level} tower`;
@@ -63,16 +92,14 @@ export class BottomPanel {
     }
 
     close(): void {
-        this.panel.classList.remove('is-open');
-        this.kicker.textContent = 'Ready';
-        this.title.textContent = 'Select a buildable square';
-        this.body.innerHTML = '';
-        this.currentQuestion = undefined;
-        this.pendingAction = undefined;
+        this.resetPanel();
+        this.hideBuildMenu();
         this.callbacks.onClose();
     }
 
     private showQuestion(action: PendingAction): void {
+        this.hideBuildMenu();
+        this.panel.classList.add('is-open');
         this.pendingAction = action;
         this.currentQuestion = this.vocab.createQuestion(action.difficulty);
         this.kicker.textContent = DIFFICULTY_LABELS[action.difficulty];
@@ -113,6 +140,41 @@ export class BottomPanel {
         const retry = this.createButton('primary-button', 'Try another question', 'retry-question');
         retry.addEventListener('click', () => this.showQuestion(action));
         this.body.append(retry);
+    }
+
+    private resetPanel(): void {
+        this.panel.classList.remove('is-open');
+        this.kicker.textContent = 'Ready';
+        this.title.textContent = 'Select a buildable square';
+        this.body.innerHTML = '';
+        this.currentQuestion = undefined;
+        this.pendingAction = undefined;
+    }
+
+    private hideBuildMenu(): void {
+        this.buildMenu.classList.remove('is-open');
+        this.buildMenu.hidden = true;
+        this.buildMenu.innerHTML = '';
+        this.buildMenu.style.left = '';
+        this.buildMenu.style.top = '';
+    }
+
+    private positionBuildMenu(anchor: Vec2): void {
+        const frameBounds = this.frame.getBoundingClientRect();
+        const menuBounds = this.buildMenu.getBoundingClientRect();
+        const relativeX = anchor.x - frameBounds.left;
+        const relativeY = anchor.y - frameBounds.top;
+        const maxLeft = Math.max(BUILD_MENU_PADDING, frameBounds.width - menuBounds.width - BUILD_MENU_PADDING);
+        const maxTop = Math.max(BUILD_MENU_PADDING, frameBounds.height - menuBounds.height - BUILD_MENU_PADDING);
+        const left = Math.max(BUILD_MENU_PADDING, Math.min(relativeX + BUILD_MENU_OFFSET, maxLeft));
+        const abovePointer = relativeY - menuBounds.height - BUILD_MENU_OFFSET;
+        const belowPointer = relativeY + BUILD_MENU_OFFSET;
+        const top = abovePointer >= BUILD_MENU_PADDING
+            ? abovePointer
+            : Math.min(belowPointer, maxTop);
+
+        this.buildMenu.style.left = `${left}px`;
+        this.buildMenu.style.top = `${Math.max(BUILD_MENU_PADDING, top)}px`;
     }
 
     private createDiv(className: string): HTMLDivElement {

@@ -13,7 +13,7 @@ import { ProjectileSystem } from '../systems/ProjectileSystem';
 import { TowerSystem } from '../systems/TowerSystem';
 import { VocabQuestionSystem } from '../systems/VocabQuestionSystem';
 import { BottomPanel } from '../ui/BottomPanel';
-import type { EnemyState, GridPoint, ProjectileState, TowerDifficulty, TowerState } from '../types';
+import type { EnemyState, GridPoint, ProjectileState, TowerDifficulty, TowerState, Vec2 } from '../types';
 
 interface DebugToggles {
     grid: boolean;
@@ -123,6 +123,8 @@ export class GameScene extends Phaser.Scene {
         }
         const cell = worldToGrid({ x: pointer.x, y: pointer.y }, this.generatedMap.grid, GAME_CONFIG.map);
         if (!cell) {
+            this.panel.close();
+            this.render();
             return;
         }
         const tower = this.findTowerAt(cell.x, cell.y);
@@ -131,9 +133,9 @@ export class GameScene extends Phaser.Scene {
         if (tower) {
             this.panel.openUpgrade(tower);
         } else if (this.generatedMap.grid.isBuildable(cell.x, cell.y)) {
-            this.panel.openBuild(cell);
+            this.panel.openBuild(cell, this.getPointerClientPosition(pointer));
         } else {
-            this.selectedTower = undefined;
+            this.panel.close();
         }
         this.render();
     }
@@ -172,6 +174,15 @@ export class GameScene extends Phaser.Scene {
     private clearSelection(): void {
         this.selectedCell = undefined;
         this.selectedTower = undefined;
+    }
+
+    private getPointerClientPosition(pointer: Phaser.Input.Pointer): Vec2 {
+        const canvas = this.scale.canvas;
+        const bounds = canvas.getBoundingClientRect();
+        return {
+            x: bounds.left + pointer.x * (bounds.width / canvas.width),
+            y: bounds.top + pointer.y * (bounds.height / canvas.height),
+        };
     }
 
     private registerDebugKeys(): void {
