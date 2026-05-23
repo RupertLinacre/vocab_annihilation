@@ -54,11 +54,14 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
 
     await page.getByTestId('build-easy').click();
     await expect(page.locator('[data-testid="bottom-panel"]')).toHaveClass(/is-open/);
+    await expect(page.getByTestId('build-popup')).toBeVisible();
     await page.locator('[data-testid="answer-button"][data-correct="true"]').click();
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getTowerCount())).toBe(1);
 
     await clickGamePoint(page, buildable!.worldX, buildable!.worldY);
-    await expect(page.getByTestId('upgrade-button')).toBeVisible();
+    await expect(page.locator('[data-testid="bottom-panel"]')).toHaveClass(/is-open/);
+    await expect(page.getByTestId('build-popup')).toBeVisible();
+    await expect(page.locator('[data-testid="answer-button"]')).toHaveCount(3);
 
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getEnemyCount())).toBeGreaterThan(0);
     const firstEnemyPosition = await page.evaluate(() => window.vocabAnnihilation!.getEnemySnapshot()[0]);

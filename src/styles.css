@@ -152,9 +152,18 @@ body {
   gap: 8px;
 }
 
+.answer-popup-actions {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .build-popup-actions .difficulty-button {
   min-width: 0;
   text-align: center;
+}
+
+.answer-popup-actions .choice-button {
+  min-width: 0;
+  text-align: left;
 }
 
 @keyframes build-popup-enter {

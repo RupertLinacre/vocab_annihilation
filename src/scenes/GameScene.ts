@@ -128,12 +128,13 @@ export class GameScene extends Phaser.Scene {
             return;
         }
         const tower = this.findTowerAt(cell.x, cell.y);
+        const pointerPosition = this.getPointerClientPosition(pointer);
         this.selectedCell = cell;
         this.selectedTower = tower;
         if (tower) {
-            this.panel.openUpgrade(tower);
+            this.panel.openUpgrade(tower, pointerPosition);
         } else if (this.generatedMap.grid.isBuildable(cell.x, cell.y)) {
-            this.panel.openBuild(cell, this.getPointerClientPosition(pointer));
+            this.panel.openBuild(cell, pointerPosition);
         } else {
             this.panel.close();
         }

@@ -27,6 +27,8 @@ export class BottomPanel {
     private readonly body = document.querySelector<HTMLElement>('[data-panel-body]')!;
     private readonly closeButton = document.querySelector<HTMLButtonElement>('[data-panel-close]')!;
     private readonly buildMenu: HTMLElement;
+    private closeTimeoutId: number | undefined;
+    private popupAnchor: Vec2 | undefined;
     private currentQuestion: VocabQuestion | undefined;
     private pendingAction: PendingAction | undefined;
 
@@ -41,7 +43,9 @@ export class BottomPanel {
     }
 
     openBuild(cell: GridPoint, anchor: Vec2): void {
+        this.clearPendingClose();
         this.resetPanel();
+        this.popupAnchor = anchor;
         this.hideBuildMenu();
 
         const header = this.createDiv('build-popup-header');
@@ -70,34 +74,34 @@ export class BottomPanel {
         this.positionBuildMenu(anchor);
     }
 
-    openUpgrade(tower: TowerState): void {
+    openUpgrade(tower: TowerState, anchor: Vec2): void {
+        this.clearPendingClose();
         this.hideBuildMenu();
-        this.panel.classList.add('is-open');
-        this.currentQuestion = undefined;
-        this.pendingAction = undefined;
         const stats = getTowerStats(tower);
-        this.kicker.textContent = TOWER_LABELS[tower.type];
-        this.title.textContent = `Level ${tower.level} tower`;
-        this.body.innerHTML = '';
-        this.body.append(this.createParagraph('meta-line', `Range ${Math.round(stats.range)} px. Fire interval ${Math.round(stats.cooldownMs)} ms.`));
+        this.resetPanel();
+        this.popupAnchor = anchor;
         if (!canUpgradeTower(tower)) {
+            this.panel.classList.add('is-open');
+            this.kicker.textContent = TOWER_LABELS[tower.type];
+            this.title.textContent = `Level ${tower.level} tower`;
+            this.body.append(this.createParagraph('meta-line', `Range ${Math.round(stats.range)} px. Fire interval ${Math.round(stats.cooldownMs)} ms.`));
             this.body.append(this.createParagraph('feedback good', 'Maximum level reached.'));
             return;
         }
         const nextLevel = tower.level + 1;
         const difficulty = getUpgradeQuestionDifficulty(nextLevel);
-        const button = this.createButton('primary-button', `Upgrade to level ${nextLevel}: ${DIFFICULTY_LABELS[difficulty]} question`, 'upgrade-button');
-        button.addEventListener('click', () => this.showQuestion({ kind: 'upgrade', tower, difficulty }));
-        this.body.append(button);
+        this.showQuestion({ kind: 'upgrade', tower, difficulty });
     }
 
     close(): void {
+        this.clearPendingClose();
         this.resetPanel();
         this.hideBuildMenu();
         this.callbacks.onClose();
     }
 
     private showQuestion(action: PendingAction): void {
+        this.clearPendingClose();
         this.hideBuildMenu();
         this.panel.classList.add('is-open');
         this.pendingAction = action;
@@ -106,14 +110,9 @@ export class BottomPanel {
         this.title.textContent = action.kind === 'build' ? 'Choose the word' : `Upgrade question`;
         this.body.innerHTML = '';
         const definition = this.createParagraph('definition', this.currentQuestion.definition);
-        const answerGrid = this.createDiv('answer-grid');
-        this.currentQuestion.choices.forEach((choice) => {
-            const button = this.createButton('choice-button', choice, 'answer-button');
-            button.dataset.correct = String(choice === this.currentQuestion?.correctWord);
-            button.addEventListener('click', () => this.answer(choice));
-            answerGrid.append(button);
-        });
-        this.body.append(definition, answerGrid, this.createParagraph('feedback', ''));
+        const instruction = this.createParagraph('meta-line', 'Answer choices are shown beside your pointer.');
+        this.body.append(definition, instruction, this.createParagraph('feedback', ''));
+        this.showAnswerPopup();
     }
 
     private answer(choice: string): void {
@@ -130,7 +129,8 @@ export class BottomPanel {
             } else {
                 this.callbacks.onUpgrade(this.pendingAction.tower);
             }
-            window.setTimeout(() => this.close(), 220);
+            this.clearPendingClose();
+            this.closeTimeoutId = window.setTimeout(() => this.close(), 220);
             return;
         }
 
@@ -147,6 +147,7 @@ export class BottomPanel {
         this.kicker.textContent = 'Ready';
         this.title.textContent = 'Select a buildable square';
         this.body.innerHTML = '';
+        this.popupAnchor = undefined;
         this.currentQuestion = undefined;
         this.pendingAction = undefined;
     }
@@ -157,6 +158,45 @@ export class BottomPanel {
         this.buildMenu.innerHTML = '';
         this.buildMenu.style.left = '';
         this.buildMenu.style.top = '';
+    }
+
+    private showAnswerPopup(): void {
+        if (!this.currentQuestion || !this.popupAnchor) {
+            return;
+        }
+
+        const header = this.createDiv('build-popup-header');
+        const heading = this.createDiv('build-popup-head');
+        heading.append(this.createParagraph('panel-kicker build-popup-kicker', DIFFICULTY_LABELS[this.currentQuestion.difficulty]));
+        const title = document.createElement('h2');
+        title.textContent = 'Pick the word';
+        heading.append(title);
+
+        const closeButton = this.createButton('icon-button build-popup-close', '×', 'answer-popup-close');
+        closeButton.setAttribute('aria-label', 'Close answers');
+        closeButton.addEventListener('click', () => this.close());
+        header.append(heading, closeButton);
+
+        const row = this.createDiv('build-popup-actions answer-popup-actions');
+        this.currentQuestion.choices.forEach((choice) => {
+            const button = this.createButton('choice-button', choice, 'answer-button');
+            button.dataset.correct = String(choice === this.currentQuestion?.correctWord);
+            button.addEventListener('click', () => this.answer(choice));
+            row.append(button);
+        });
+
+        this.buildMenu.append(header, row);
+        this.buildMenu.hidden = false;
+        this.buildMenu.classList.add('is-open');
+        this.positionBuildMenu(this.popupAnchor);
+    }
+
+    private clearPendingClose(): void {
+        if (this.closeTimeoutId === undefined) {
+            return;
+        }
+        window.clearTimeout(this.closeTimeoutId);
+        this.closeTimeoutId = undefined;
     }
 
     private positionBuildMenu(anchor: Vec2): void {
