@@ -1,6 +1,7 @@
 import { GAME_CONFIG } from '../config/gameConfig';
 import { SeededRandom } from '../core/SeededRandom';
 import type { GridPoint } from '../types';
+import { getBaseFootprint } from './BaseFootprint';
 import { cardinalNeighbors, countBuildableCells, Grid, pointKey } from './Grid';
 
 export interface GeneratedMap {
@@ -12,14 +13,16 @@ export interface GeneratedMap {
 }
 
 export function hasPathToBase(grid: Grid, start: GridPoint, base: GridPoint): boolean {
-    if (grid.isBlocked(start.x, start.y) || grid.isBlocked(base.x, base.y)) {
+    const baseCells = getBaseFootprint(base, grid);
+    if (grid.isBlocked(start.x, start.y) || baseCells.every((cell) => grid.isBlocked(cell.x, cell.y))) {
         return false;
     }
+    const baseKeys = new Set(baseCells.map((cell) => pointKey(cell)));
     const visited = new Set<string>([pointKey(start)]);
     const queue: GridPoint[] = [start];
     while (queue.length > 0) {
         const point = queue.shift()!;
-        if (point.x === base.x && point.y === base.y) {
+        if (baseKeys.has(pointKey(point))) {
             return true;
         }
         for (const neighbor of cardinalNeighbors(point, grid)) {

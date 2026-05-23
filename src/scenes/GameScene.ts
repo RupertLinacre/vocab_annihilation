@@ -3,6 +3,7 @@ import { ENEMY_STATS, GAME_CONFIG, TOWER_COLORS } from '../config/gameConfig';
 import { SeededRandom } from '../core/SeededRandom';
 import { createTower, towerTypeForDifficulty, upgradeTower } from '../entities/Tower';
 import { updateEnemy } from '../entities/Enemy';
+import { isBaseFootprintCell } from '../map/BaseFootprint';
 import { cellCenter, Grid, worldToGrid } from '../map/Grid';
 import { hasLineOfSight } from '../map/LineOfSight';
 import { generateMap, type GeneratedMap } from '../map/MapGenerator';
@@ -198,7 +199,7 @@ export class GameScene extends Phaser.Scene {
         this.selectedTower = tower;
         if (tower) {
             this.panel.openUpgrade(tower, pointerPosition);
-        } else if (this.generatedMap.grid.isBuildable(cell.x, cell.y)) {
+        } else if (this.canBuildOnCell(cell)) {
             this.panel.openBuild(cell, pointerPosition);
         } else {
             this.panel.close();
@@ -207,11 +208,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     private buildTower(cell: GridPoint, difficulty: TowerDifficulty): void {
-        if (!this.generatedMap.grid.isBuildable(cell.x, cell.y) || this.findTowerAt(cell.x, cell.y)) {
+        if (!this.canBuildOnCell(cell) || this.findTowerAt(cell.x, cell.y)) {
             return;
         }
         this.towers.push(createTower(this.nextTowerId++, cell.x, cell.y, towerTypeForDifficulty(difficulty)));
         this.rebuildFlowField();
+    }
+
+    private canBuildOnCell(cell: GridPoint): boolean {
+        return this.generatedMap.grid.isBuildable(cell.x, cell.y)
+            && !isBaseFootprintCell(this.generatedMap.base, cell, this.generatedMap.grid);
     }
 
     private upgradeExistingTower(tower: TowerState): void {
@@ -320,10 +326,10 @@ export class GameScene extends Phaser.Scene {
         }
         this.graphics.lineStyle(2, 0x132119, 0.28);
         this.graphics.strokeRect(
-            originX + base.x * cellSize + 1,
-            originY + base.y * cellSize + 1,
-            cellSize - 2,
-            cellSize - 2,
+            originX + (base.x - 1) * cellSize + 1,
+            originY + (base.y - 1) * cellSize + 1,
+            cellSize * 3 - 2,
+            cellSize * 3 - 2,
         );
     }
 
@@ -430,7 +436,7 @@ export class GameScene extends Phaser.Scene {
             return;
         }
         const { originX, originY, cellSize } = GAME_CONFIG.map;
-        const blocked = !this.generatedMap.grid.isBuildable(this.selectedCell.x, this.selectedCell.y) && !this.selectedTower;
+        const blocked = !this.canBuildOnCell(this.selectedCell) && !this.selectedTower;
         this.graphics.lineStyle(3, blocked ? 0xe85d75 : 0xffe66d, 0.95);
         this.graphics.strokeRect(originX + this.selectedCell.x * cellSize + 2, originY + this.selectedCell.y * cellSize + 2, cellSize - 4, cellSize - 4);
     }
@@ -514,7 +520,7 @@ export class GameScene extends Phaser.Scene {
         });
 
         const baseCenter = cellCenter(base, GAME_CONFIG.map);
-        this.add.image(baseCenter.x, baseCenter.y, SPRITE_PATHS.base).setDisplaySize(cellSize, cellSize).setDepth(1);
+        this.add.image(baseCenter.x, baseCenter.y, SPRITE_PATHS.base).setDisplaySize(cellSize * 3, cellSize * 3).setDepth(1);
     }
 
     private getTerrainTextureKey(terrain: TerrainType, x: number, y: number): string {
@@ -552,7 +558,7 @@ export class GameScene extends Phaser.Scene {
             getFirstBuildableCell: () => {
                 for (let y = 3; y < this.generatedMap.grid.rows; y += 1) {
                     for (let x = 3; x < this.generatedMap.grid.cols; x += 1) {
-                        if (this.generatedMap.grid.isBuildable(x, y) && !this.findTowerAt(x, y)) {
+                        if (this.canBuildOnCell({ x, y }) && !this.findTowerAt(x, y)) {
                             const center = cellCenter({ x, y }, GAME_CONFIG.map);
                             return { x, y, worldX: center.x, worldY: center.y };
                         }

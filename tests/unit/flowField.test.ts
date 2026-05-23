@@ -23,6 +23,8 @@ describe('threat maps and flow fields', () => {
         const field = buildFlowField(grid, base, createEmptyCostGrid(grid));
         expect(field.costToBase[1][0]).toBeLessThan(Number.POSITIVE_INFINITY);
         expect(field.direction[1][0].x).toBeGreaterThan(0);
+        expect(field.costToBase[0][4]).toBe(0);
+        expect(field.costToBase[1][5]).toBe(0);
     });
 
     it('keeps blocked cells unreachable in the cost field', () => {

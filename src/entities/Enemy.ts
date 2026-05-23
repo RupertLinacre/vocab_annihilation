@@ -1,8 +1,9 @@
 import { ENEMY_STATS, GAME_CONFIG } from '../config/gameConfig';
 import type { EnemyState, EnemyType, MapGeometry } from '../types';
+import { isBaseFootprintCell } from '../map/BaseFootprint';
 import type { FlowField } from '../pathfinding/FlowField';
 import { sampleFlowDirection } from '../pathfinding/FlowField';
-import { cellCenter, Grid, worldToGrid } from '../map/Grid';
+import { Grid, worldToGrid } from '../map/Grid';
 
 export function createEnemy(id: number, type: EnemyType, x: number, y: number, healthScale = 1): EnemyState {
     const stats = ENEMY_STATS[type];
@@ -61,6 +62,5 @@ export function updateEnemy(enemy: EnemyState, dtSeconds: number, flowField: Flo
         enemy.vy *= -0.18;
     }
 
-    const baseCenter = cellCenter(flowField.base, geometry);
-    return Math.hypot(enemy.x - baseCenter.x, enemy.y - baseCenter.y) < geometry.cellSize * 0.58;
+    return newCell ? isBaseFootprintCell(flowField.base, newCell, grid) : false;
 }

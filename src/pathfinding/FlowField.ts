@@ -1,5 +1,6 @@
 import { GAME_CONFIG } from '../config/gameConfig';
 import type { GridPoint, MapGeometry, Vec2 } from '../types';
+import { getBaseFootprint } from '../map/BaseFootprint';
 import { cellCenter, eightNeighbors, Grid, terrainMovementCost, worldToGrid } from '../map/Grid';
 import type { CostGrid } from './ThreatMap';
 
@@ -28,8 +29,12 @@ function popCheapest(queue: QueueNode[]): QueueNode {
 export function buildFlowField(grid: Grid, base: GridPoint, threatCosts: CostGrid): FlowField {
     const costToBase = Array.from({ length: grid.rows }, () => Array.from({ length: grid.cols }, () => Number.POSITIVE_INFINITY));
     const direction = Array.from({ length: grid.rows }, () => Array.from({ length: grid.cols }, () => ({ x: 0, y: 0 })));
-    const queue: QueueNode[] = [{ point: base, cost: 0 }];
-    costToBase[base.y][base.x] = 0;
+    const baseCells = getBaseFootprint(base, grid).filter((cell) => !grid.isBlocked(cell.x, cell.y));
+    const queue: QueueNode[] = [];
+    for (const cell of baseCells) {
+        costToBase[cell.y][cell.x] = 0;
+        queue.push({ point: cell, cost: 0 });
+    }
 
     while (queue.length > 0) {
         const current = popCheapest(queue);
