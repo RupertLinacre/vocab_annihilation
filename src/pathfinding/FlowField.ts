@@ -1,7 +1,7 @@
 import { GAME_CONFIG } from '../config/gameConfig';
 import type { GridPoint, MapGeometry, Vec2 } from '../types';
 import { getBaseFootprint } from '../map/BaseFootprint';
-import { cellCenter, eightNeighbors, Grid, terrainMovementCost, worldToGrid } from '../map/Grid';
+import { eightNeighbors, Grid, terrainMovementCost, worldToGrid } from '../map/Grid';
 import type { CostGrid } from './ThreatMap';
 
 export interface FlowField {
@@ -13,6 +13,17 @@ export interface FlowField {
 interface QueueNode {
     point: GridPoint;
     cost: number;
+}
+
+function canStepBetween(from: GridPoint, to: GridPoint, grid: Grid): boolean {
+    if (grid.isBlocked(to.x, to.y)) {
+        return false;
+    }
+    const diagonal = from.x !== to.x && from.y !== to.y;
+    if (!diagonal) {
+        return true;
+    }
+    return !grid.isBlocked(from.x, to.y) && !grid.isBlocked(to.x, from.y);
 }
 
 function popCheapest(queue: QueueNode[]): QueueNode {
@@ -42,7 +53,7 @@ export function buildFlowField(grid: Grid, base: GridPoint, threatCosts: CostGri
             continue;
         }
         for (const neighbor of eightNeighbors(current.point, grid)) {
-            if (grid.isBlocked(neighbor.x, neighbor.y)) {
+            if (!canStepBetween(current.point, neighbor, grid)) {
                 continue;
             }
             const diagonal = neighbor.x !== current.point.x && neighbor.y !== current.point.y;
@@ -63,6 +74,9 @@ export function buildFlowField(grid: Grid, base: GridPoint, threatCosts: CostGri
             let best = { x, y };
             let bestCost = costToBase[y][x];
             for (const neighbor of eightNeighbors({ x, y }, grid)) {
+                if (!canStepBetween({ x, y }, neighbor, grid)) {
+                    continue;
+                }
                 if (costToBase[neighbor.y][neighbor.x] < bestCost) {
                     best = neighbor;
                     bestCost = costToBase[neighbor.y][neighbor.x];
@@ -81,21 +95,13 @@ export function buildFlowField(grid: Grid, base: GridPoint, threatCosts: CostGri
 export function sampleFlowDirection(flowField: FlowField, grid: Grid, worldPosition: Vec2, geometry: MapGeometry = GAME_CONFIG.map): Vec2 {
     const cell = worldToGrid(worldPosition, grid, geometry);
     if (!cell) {
-        const baseCenter = cellCenter(flowField.base, geometry);
-        const dx = baseCenter.x - worldPosition.x;
-        const dy = baseCenter.y - worldPosition.y;
-        const length = Math.hypot(dx, dy) || 1;
-        return { x: dx / length, y: dy / length };
+        return { x: 0, y: 0 };
     }
     const sampled = flowField.direction[cell.y][cell.x];
     if (sampled.x !== 0 || sampled.y !== 0) {
         return sampled;
     }
-    const baseCenter = cellCenter(flowField.base, geometry);
-    const dx = baseCenter.x - worldPosition.x;
-    const dy = baseCenter.y - worldPosition.y;
-    const length = Math.hypot(dx, dy) || 1;
-    return { x: dx / length, y: dy / length };
+    return { x: 0, y: 0 };
 }
 
 export function costAtWorldPosition(flowField: FlowField, grid: Grid, worldPosition: Vec2, geometry: MapGeometry = GAME_CONFIG.map): number {

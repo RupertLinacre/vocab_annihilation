@@ -46,6 +46,12 @@ export interface EnemyState {
     radius: number;
     baseDamage: number;
     hurtFlashMs: number;
+    lastProgressDistance: number;
+    stalledSeconds: number;
+    panicSecondsRemaining: number;
+    panicStartDistance: number;
+    isStuck: boolean;
+    lastMoveSpeed: number;
 }
 
 export interface ProjectileState {

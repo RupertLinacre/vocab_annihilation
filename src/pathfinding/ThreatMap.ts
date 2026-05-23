@@ -30,7 +30,8 @@ export function calculateTowerThreatCosts(grid: Grid, towers: readonly TowerStat
                     continue;
                 }
                 const falloff = 1 - Math.min(0.55, distance / stats.range * 0.55);
-                threat[y][x] += stats.threat * GAME_CONFIG.threatWeight * falloff;
+                const cost = stats.threat * GAME_CONFIG.threatWeight * falloff;
+                threat[y][x] = Math.min(GAME_CONFIG.maxTowerThreatCost, threat[y][x] + cost);
             }
         }
     }

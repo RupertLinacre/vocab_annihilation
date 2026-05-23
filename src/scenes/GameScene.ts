@@ -8,7 +8,7 @@ import { cellCenter, Grid, worldToGrid } from '../map/Grid';
 import { hasLineOfSight } from '../map/LineOfSight';
 import { generateMap, type GeneratedMap } from '../map/MapGenerator';
 import { buildFlowField, type FlowField } from '../pathfinding/FlowField';
-import { calculateTowerThreatCosts, type CostGrid, getTowerStats } from '../pathfinding/ThreatMap';
+import { calculateTowerThreatCosts, createEmptyCostGrid, type CostGrid, getTowerStats } from '../pathfinding/ThreatMap';
 import { EnemySpawner } from '../systems/EnemySpawner';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
 import { TowerSystem } from '../systems/TowerSystem';
@@ -95,6 +95,7 @@ interface ExplosionVisual {
 export class GameScene extends Phaser.Scene {
     private generatedMap!: GeneratedMap;
     private flowField!: FlowField;
+    private emergencyFlowField!: FlowField;
     private threatCosts!: CostGrid;
     private graphics!: Phaser.GameObjects.Graphics;
     private debugGraphics!: Phaser.GameObjects.Graphics;
@@ -165,7 +166,7 @@ export class GameScene extends Phaser.Scene {
 
         const enemySurvivors: EnemyState[] = [];
         for (const enemy of this.enemies) {
-            const reachedBase = updateEnemy(enemy, deltaMs / 1000, this.flowField, this.generatedMap.grid, GAME_CONFIG.map, this.enemies);
+            const reachedBase = updateEnemy(enemy, deltaMs / 1000, this.flowField, this.emergencyFlowField, this.generatedMap.grid, GAME_CONFIG.map, this.enemies);
             if (reachedBase) {
                 this.baseHealth = Math.max(0, this.baseHealth - enemy.baseDamage);
             } else if (enemy.health > 0) {
@@ -245,6 +246,7 @@ export class GameScene extends Phaser.Scene {
     private rebuildFlowField(): void {
         this.threatCosts = calculateTowerThreatCosts(this.generatedMap.grid, this.towers, GAME_CONFIG.map);
         this.flowField = buildFlowField(this.generatedMap.grid, this.generatedMap.base, this.threatCosts);
+        this.emergencyFlowField = buildFlowField(this.generatedMap.grid, this.generatedMap.base, createEmptyCostGrid(this.generatedMap.grid));
     }
 
     private findTowerAt(x: number, y: number): TowerState | undefined {
@@ -401,7 +403,7 @@ export class GameScene extends Phaser.Scene {
             }
             sprite.setTexture(this.getEnemyTextureKey(enemy));
             sprite.setPosition(enemy.x, enemy.y);
-            sprite.setDisplaySize(cellSize, cellSize);
+            this.setEnemySpriteSize(sprite, cellSize);
             sprite.setDepth(2 + enemy.y / 10000);
 
             const barWidth = enemy.radius * 2.1;
@@ -418,6 +420,11 @@ export class GameScene extends Phaser.Scene {
                 this.enemySprites.delete(enemyId);
             }
         }
+    }
+
+    private setEnemySpriteSize(sprite: Phaser.GameObjects.Image, maxSize: number): void {
+        sprite.setScale(1);
+        sprite.setScale(maxSize / Math.max(sprite.width, sprite.height, 1));
     }
 
     private renderProjectiles(): void {
@@ -566,7 +573,7 @@ export class GameScene extends Phaser.Scene {
         if (enemy.hurtFlashMs > 0) {
             return 'hurt';
         }
-        return Math.hypot(enemy.vx, enemy.vy) > enemy.speed * 0.25 ? 'run' : 'stop';
+        return enemy.lastMoveSpeed > enemy.speed * 0.12 ? 'run' : 'stop';
     }
 
     private installBrowserHooks(): void {
@@ -607,6 +614,12 @@ export class GameScene extends Phaser.Scene {
             radius: 10,
             baseDamage: 4,
             hurtFlashMs: 0,
+            lastProgressDistance: Number.POSITIVE_INFINITY,
+            stalledSeconds: 0,
+            panicSecondsRemaining: 0,
+            panicStartDistance: Number.POSITIVE_INFINITY,
+            isStuck: false,
+            lastMoveSpeed: 0,
         });
     }
 }

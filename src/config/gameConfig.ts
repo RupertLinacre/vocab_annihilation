@@ -22,10 +22,15 @@ export const GAME_CONFIG = {
         tree: 0,
     } satisfies Record<TerrainType, number>,
     threatWeight: 5.2,
+    maxTowerThreatCost: 18,
+    enemyStuck: {
+        meaningfulProgressPixels: 8,
+        stuckAfterSeconds: 2.5,
+        panicSeconds: 3.25,
+    },
     mapGenerationAttempts: 50,
     uiPanelHeight: 188,
 };
-
 export const TOWER_DIFFICULTY_TO_TYPE: Record<TowerDifficulty, TowerType> = {
     easy: 'easy',
     medium: 'spray',
