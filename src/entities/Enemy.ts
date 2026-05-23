@@ -18,6 +18,7 @@ export function createEnemy(id: number, type: EnemyType, x: number, y: number, h
         speed: stats.speed,
         radius: stats.radius,
         baseDamage: stats.baseDamage,
+        hurtFlashMs: 0,
     };
 }
 

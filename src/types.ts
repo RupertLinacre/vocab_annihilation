@@ -45,6 +45,7 @@ export interface EnemyState {
     speed: number;
     radius: number;
     baseDamage: number;
+    hurtFlashMs: number;
 }
 
 export interface ProjectileState {

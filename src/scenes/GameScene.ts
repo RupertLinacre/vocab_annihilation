@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ENEMY_COLORS, GAME_CONFIG, TOWER_COLORS } from '../config/gameConfig';
+import { ENEMY_STATS, GAME_CONFIG, TOWER_COLORS } from '../config/gameConfig';
 import { SeededRandom } from '../core/SeededRandom';
 import { createTower, towerTypeForDifficulty, upgradeTower } from '../entities/Tower';
 import { updateEnemy } from '../entities/Enemy';
@@ -13,7 +13,60 @@ import { ProjectileSystem } from '../systems/ProjectileSystem';
 import { TowerSystem } from '../systems/TowerSystem';
 import { VocabQuestionSystem } from '../systems/VocabQuestionSystem';
 import { BottomPanel } from '../ui/BottomPanel';
-import type { EnemyState, GridPoint, ProjectileState, TowerDifficulty, TowerState, Vec2 } from '../types';
+import type { EnemyState, GridPoint, ProjectileState, TerrainType, TowerDifficulty, TowerState, TowerType, Vec2 } from '../types';
+
+const SPRITE_PATHS = {
+    base: 'sprites/base_1.png',
+    grass1: 'sprites/grass_1.png',
+    grass2: 'sprites/grass_2.png',
+    grass3: 'sprites/grass_3.png',
+    grass4: 'sprites/grass_4.png',
+    grass5: 'sprites/grass_5.png',
+    tree1: 'sprites/tree_1.png',
+    tree2: 'sprites/tree_2.png',
+    tarmac1: 'sprites/tarmac_1.png',
+    tarmac2: 'sprites/tarmac_2.png',
+    tarmac3: 'sprites/tarmac_3.png',
+    towerBasic: 'sprites/turret_basic.png',
+    towerCluster: 'sprites/turret_cluster.png',
+    towerClusterBomb: 'sprites/turrent_cluster_bomb.png',
+    towerSidewinder: 'sprites/turret_sidewinder.png',
+    monster1Run: 'sprites/monster_1_run.png',
+    monster1Stop: 'sprites/monster_1_stop.png',
+    monster1Hurt: 'sprites/monster_1_hurt.png',
+    monster2Run: 'sprites/monster_2_run.png',
+    monster2Stop: 'sprites/monster_2_stop.png',
+    monster2Hurt: 'sprites/monster_2_hurt.png',
+    monster3Run: 'sprites/monster_3_run.png',
+    monster3Stop: 'sprites/monster_3_stop.png',
+    monster3Hurt: 'sprites/monster_3_hurt.png',
+    monster4Run: 'sprites/monster_4_run.png',
+    monster4Stop: 'sprites/monster_4_stop.png',
+    monster4Hurt: 'sprites/monster_4_hurt.png',
+} as const;
+
+const TERRAIN_TEXTURES: Record<TerrainType, readonly string[]> = {
+    grass: [SPRITE_PATHS.grass1, SPRITE_PATHS.grass2, SPRITE_PATHS.grass3, SPRITE_PATHS.grass4, SPRITE_PATHS.grass5],
+    tree: [SPRITE_PATHS.tree1, SPRITE_PATHS.tree2],
+    tarmac: [SPRITE_PATHS.tarmac1, SPRITE_PATHS.tarmac2, SPRITE_PATHS.tarmac3],
+};
+
+const TOWER_TEXTURES: Record<TowerType, string> = {
+    easy: SPRITE_PATHS.towerBasic,
+    spray: SPRITE_PATHS.towerCluster,
+    missile: SPRITE_PATHS.towerSidewinder,
+    cluster: SPRITE_PATHS.towerClusterBomb,
+};
+
+const ENEMY_TEXTURES = {
+    1: { run: SPRITE_PATHS.monster1Run, stop: SPRITE_PATHS.monster1Stop, hurt: SPRITE_PATHS.monster1Hurt },
+    2: { run: SPRITE_PATHS.monster2Run, stop: SPRITE_PATHS.monster2Stop, hurt: SPRITE_PATHS.monster2Hurt },
+    3: { run: SPRITE_PATHS.monster3Run, stop: SPRITE_PATHS.monster3Stop, hurt: SPRITE_PATHS.monster3Hurt },
+    4: { run: SPRITE_PATHS.monster4Run, stop: SPRITE_PATHS.monster4Stop, hurt: SPRITE_PATHS.monster4Hurt },
+} as const;
+
+type EnemyTextureTier = keyof typeof ENEMY_TEXTURES;
+type EnemyTextureState = keyof (typeof ENEMY_TEXTURES)[EnemyTextureTier];
 
 interface DebugToggles {
     grid: boolean;
@@ -36,6 +89,8 @@ export class GameScene extends Phaser.Scene {
     private threatCosts!: CostGrid;
     private graphics!: Phaser.GameObjects.Graphics;
     private debugGraphics!: Phaser.GameObjects.Graphics;
+    private towerSprites = new Map<number, Phaser.GameObjects.Image>();
+    private enemySprites = new Map<number, Phaser.GameObjects.Image>();
     private costTexts: Phaser.GameObjects.Text[] = [];
     private panel!: BottomPanel;
     private spawner!: EnemySpawner;
@@ -60,13 +115,20 @@ export class GameScene extends Phaser.Scene {
         super('GameScene');
     }
 
+    preload(): void {
+        for (const path of Object.values(SPRITE_PATHS)) {
+            this.load.image(path, path);
+        }
+    }
+
     create(): void {
         const seedParam = new URLSearchParams(window.location.search).get('seed');
         const seed = seedParam ? SeededRandom.hash(seedParam) : Date.now() % 1000000000;
         this.generatedMap = generateMap(seed);
         this.rebuildFlowField();
-        this.graphics = this.add.graphics();
-        this.debugGraphics = this.add.graphics();
+        this.graphics = this.add.graphics().setDepth(3);
+        this.debugGraphics = this.add.graphics().setDepth(5);
+        this.createMapSprites();
         this.spawner = new EnemySpawner(this.generatedMap.spawns, GAME_CONFIG.map, new SeededRandom(`${seed}:spawns`));
         this.panel = new BottomPanel(new VocabQuestionSystem(new SeededRandom(`${seed}:vocab`)), {
             onBuild: (cell, difficulty) => this.buildTower(cell, difficulty),
@@ -88,6 +150,9 @@ export class GameScene extends Phaser.Scene {
         }
         this.elapsedMs += deltaMs;
         this.enemies.push(...this.spawner.update(deltaMs));
+        for (const enemy of this.enemies) {
+            enemy.hurtFlashMs = Math.max(0, enemy.hurtFlashMs - deltaMs);
+        }
 
         const enemySurvivors: EnemyState[] = [];
         for (const enemy of this.enemies) {
@@ -235,15 +300,6 @@ export class GameScene extends Phaser.Scene {
     private renderMap(): void {
         const { grid, spawns, base } = this.generatedMap;
         const { originX, originY, cellSize } = GAME_CONFIG.map;
-        grid.forEachCell((x, y, terrain) => {
-            const color = terrain === 'tree' ? 0x183528 : terrain === 'tarmac' ? 0x747a77 : 0x3d8b55;
-            this.graphics.fillStyle(color, 1);
-            this.graphics.fillRect(originX + x * cellSize, originY + y * cellSize, cellSize, cellSize);
-            if (terrain === 'grass') {
-                this.graphics.fillStyle(0x5aa96d, 0.22);
-                this.graphics.fillRect(originX + x * cellSize + 3, originY + y * cellSize + 3, cellSize - 6, cellSize - 6);
-            }
-        });
         if (this.debug.grid) {
             this.graphics.lineStyle(1, 0xf7f0d6, 0.16);
             for (let x = 0; x <= grid.cols; x += 1) {
@@ -262,11 +318,13 @@ export class GameScene extends Phaser.Scene {
             this.graphics.lineStyle(2, 0x3b2106, 0.7);
             this.graphics.strokeCircle(center.x, center.y, 18);
         }
-        const baseCenter = cellCenter(base, GAME_CONFIG.map);
-        this.graphics.fillStyle(0xf7f0d6, 1);
-        this.graphics.fillRect(baseCenter.x - 23, baseCenter.y - 27, 46, 54);
-        this.graphics.fillStyle(0x2ec4b6, 1);
-        this.graphics.fillRect(baseCenter.x - 15, baseCenter.y - 18, 30, 36);
+        this.graphics.lineStyle(2, 0x132119, 0.28);
+        this.graphics.strokeRect(
+            originX + base.x * cellSize + 1,
+            originY + base.y * cellSize + 1,
+            cellSize - 2,
+            cellSize - 2,
+        );
     }
 
     private renderTowerRanges(): void {
@@ -280,39 +338,63 @@ export class GameScene extends Phaser.Scene {
     }
 
     private renderTowers(): void {
+        const activeIds = new Set<number>();
+        const { cellSize } = GAME_CONFIG.map;
         for (const tower of this.towers) {
+            activeIds.add(tower.id);
             const center = cellCenter({ x: tower.gridX, y: tower.gridY }, GAME_CONFIG.map);
-            const color = TOWER_COLORS[tower.type];
-            this.graphics.fillStyle(0x101614, 0.85);
-            this.graphics.fillRect(center.x - 15, center.y - 15, 30, 30);
-            this.graphics.fillStyle(color, 1);
-            this.graphics.fillRect(center.x - 12, center.y - 12, 24, 24);
+            let sprite = this.towerSprites.get(tower.id);
+            if (!sprite) {
+                sprite = this.add.image(center.x, center.y, TOWER_TEXTURES[tower.type]).setDepth(2);
+                this.towerSprites.set(tower.id, sprite);
+            }
+            sprite.setTexture(TOWER_TEXTURES[tower.type]);
+            sprite.setPosition(center.x, center.y);
+            sprite.setDisplaySize(cellSize, cellSize);
+            sprite.setAlpha(tower === this.selectedTower ? 1 : 0.96);
+
             this.graphics.fillStyle(0x101614, 0.9);
             for (let level = 0; level < tower.level; level += 1) {
                 this.graphics.fillCircle(center.x - 10 + level * 5, center.y + 18, 2);
             }
-            if (tower.type === 'missile') {
-                this.graphics.fillStyle(0x101614, 0.8);
-                this.graphics.fillTriangle(center.x, center.y - 10, center.x - 8, center.y + 8, center.x + 8, center.y + 8);
-            } else if (tower.type === 'cluster') {
-                this.graphics.lineStyle(2, 0x101614, 0.85);
-                this.graphics.strokeCircle(center.x, center.y, 8);
+        }
+
+        for (const [towerId, sprite] of this.towerSprites) {
+            if (!activeIds.has(towerId)) {
+                sprite.destroy();
+                this.towerSprites.delete(towerId);
             }
         }
     }
 
     private renderEnemies(): void {
+        const activeIds = new Set<number>();
+        const { cellSize } = GAME_CONFIG.map;
         for (const enemy of this.enemies) {
-            this.graphics.fillStyle(0x0b0d0c, 0.42);
-            this.graphics.fillCircle(enemy.x + 2, enemy.y + 3, enemy.radius + 1);
-            this.graphics.fillStyle(ENEMY_COLORS[enemy.type], 1);
-            this.graphics.fillCircle(enemy.x, enemy.y, enemy.radius);
+            activeIds.add(enemy.id);
+            let sprite = this.enemySprites.get(enemy.id);
+            if (!sprite) {
+                sprite = this.add.image(enemy.x, enemy.y, this.getEnemyTextureKey(enemy));
+                this.enemySprites.set(enemy.id, sprite);
+            }
+            sprite.setTexture(this.getEnemyTextureKey(enemy));
+            sprite.setPosition(enemy.x, enemy.y);
+            sprite.setDisplaySize(cellSize, cellSize);
+            sprite.setDepth(2 + enemy.y / 10000);
+
             const barWidth = enemy.radius * 2.1;
             const healthPercent = Math.max(0, enemy.health / enemy.maxHealth);
             this.graphics.fillStyle(0x111611, 0.88);
             this.graphics.fillRect(enemy.x - barWidth / 2, enemy.y - enemy.radius - 8, barWidth, 4);
             this.graphics.fillStyle(healthPercent > 0.45 ? 0x66d17a : 0xe85d75, 1);
             this.graphics.fillRect(enemy.x - barWidth / 2, enemy.y - enemy.radius - 8, barWidth * healthPercent, 4);
+        }
+
+        for (const [enemyId, sprite] of this.enemySprites) {
+            if (!activeIds.has(enemyId)) {
+                sprite.destroy();
+                this.enemySprites.delete(enemyId);
+            }
         }
     }
 
@@ -419,6 +501,52 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
+    private createMapSprites(): void {
+        const { grid, base } = this.generatedMap;
+        const { originX, originY, cellSize } = GAME_CONFIG.map;
+
+        grid.forEachCell((x, y, terrain) => {
+            const textureKey = this.getTerrainTextureKey(terrain, x, y);
+            this.add
+                .image(originX + x * cellSize + cellSize / 2, originY + y * cellSize + cellSize / 2, textureKey)
+                .setDisplaySize(cellSize, cellSize)
+                .setDepth(0);
+        });
+
+        const baseCenter = cellCenter(base, GAME_CONFIG.map);
+        this.add.image(baseCenter.x, baseCenter.y, SPRITE_PATHS.base).setDisplaySize(cellSize, cellSize).setDepth(1);
+    }
+
+    private getTerrainTextureKey(terrain: TerrainType, x: number, y: number): string {
+        const variants = TERRAIN_TEXTURES[terrain];
+        const seedHash = (this.generatedMap.seed >>> 0) ^ ((x + 1) * 73856093) ^ ((y + 1) * 19349663);
+        return variants[seedHash % variants.length];
+    }
+
+    private getEnemyTextureKey(enemy: EnemyState): string {
+        const tier = this.getEnemyTextureTier(enemy);
+        const state = this.getEnemyTextureState(enemy);
+        return ENEMY_TEXTURES[tier][state];
+    }
+
+    private getEnemyTextureTier(enemy: EnemyState): EnemyTextureTier {
+        const healthScale = enemy.maxHealth / ENEMY_STATS[enemy.type].health;
+        if (enemy.type === 'scout') {
+            return healthScale >= 2.35 ? 2 : 1;
+        }
+        if (enemy.type === 'grunt') {
+            return healthScale >= 2.1 ? 3 : 2;
+        }
+        return healthScale >= 1.6 ? 4 : 3;
+    }
+
+    private getEnemyTextureState(enemy: EnemyState): EnemyTextureState {
+        if (enemy.hurtFlashMs > 0) {
+            return 'hurt';
+        }
+        return Math.hypot(enemy.vx, enemy.vy) > enemy.speed * 0.25 ? 'run' : 'stop';
+    }
+
     private installBrowserHooks(): void {
         const hooks = {
             getFirstBuildableCell: () => {
@@ -455,6 +583,7 @@ export class GameScene extends Phaser.Scene {
             speed: 90,
             radius: 10,
             baseDamage: 4,
+            hurtFlashMs: 0,
         });
     }
 }

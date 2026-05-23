@@ -17,6 +17,7 @@ function normalize(dx: number, dy: number): { x: number; y: number } {
 function applyDamage(enemy: EnemyState, damage: number): boolean {
     const wasAlive = enemy.health > 0;
     enemy.health -= damage;
+    enemy.hurtFlashMs = 120;
     return wasAlive && enemy.health <= 0;
 }
 
