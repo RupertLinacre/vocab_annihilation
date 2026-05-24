@@ -16,6 +16,8 @@ declare global {
             getEnemyCount: () => number;
             getEnemySnapshot: () => { id: number; x: number; y: number; health: number }[];
             getBaseHealth: () => number;
+            getDifficulty: () => string;
+            setDifficulty: (difficulty: 'veryEasy' | 'easy' | 'medium' | 'hard' | 'veryHard') => void;
             spawnEnemyNearBase: () => void;
         };
     }
@@ -43,7 +45,14 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     await page.goto('/?seed=e2e');
     await expect(page.locator('canvas')).toBeVisible();
     await expect(page.locator('[data-stat="health"]')).toHaveText(/\d+/);
+    await expect(page.locator('[data-stat="base-meter"]')).toBeVisible();
     await expect.poll(() => page.evaluate(() => Boolean(window.vocabAnnihilation))).toBe(true);
+
+    await page.getByTestId('settings-button').click();
+    await expect(page.getByTestId('settings-popup')).toBeVisible();
+    await page.getByTestId('difficulty-hard').click();
+    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getDifficulty())).toBe('hard');
+    await expect(page.getByTestId('settings-popup')).toBeHidden();
 
     const screenshot = await page.locator('canvas').screenshot();
     expect(screenshot.byteLength).toBeGreaterThan(1000);
@@ -92,5 +101,6 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     const healthBefore = await page.evaluate(() => window.vocabAnnihilation!.getBaseHealth());
     await page.evaluate(() => window.vocabAnnihilation!.spawnEnemyNearBase());
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getBaseHealth())).toBeLessThan(healthBefore);
+    await expect(page.locator('#hud')).toHaveClass(/base-hit/);
     expect(errors).toEqual([]);
 });

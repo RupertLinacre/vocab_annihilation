@@ -9,7 +9,7 @@ import { hasLineOfSight } from '../map/LineOfSight';
 import { generateMap, type GeneratedMap } from '../map/MapGenerator';
 import { buildFlowField, type FlowField } from '../pathfinding/FlowField';
 import { calculateTowerThreatCosts, createEmptyCostGrid, type CostGrid, getTowerStats } from '../pathfinding/ThreatMap';
-import { EnemySpawner } from '../systems/EnemySpawner';
+import { EnemySpawner, isGameDifficulty, type GameDifficulty } from '../systems/EnemySpawner';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
 import { TowerSystem } from '../systems/TowerSystem';
 import { VocabQuestionSystem } from '../systems/VocabQuestionSystem';
@@ -89,6 +89,15 @@ const BUILD_SHORTCUTS: Record<string, BuildDifficultySelection> = {
 const TOWER_SPRITE_MAX_SIZE = GAME_CONFIG.map.cellSize * 1.2;
 const ENEMY_SPRITE_MIN_SIZE = GAME_CONFIG.map.cellSize * 0.9;
 const ENEMY_SPRITE_MAX_SIZE = GAME_CONFIG.map.cellSize * 1.28;
+const DIFFICULTY_STORAGE_KEY = 'vocab-annihilation:difficulty';
+
+const DIFFICULTY_LABELS: Record<GameDifficulty, string> = {
+    veryEasy: 'Very easy',
+    easy: 'Easy',
+    medium: 'Medium',
+    hard: 'Hard',
+    veryHard: 'Very hard',
+};
 
 type EnemyTextureTier = keyof typeof ENEMY_TEXTURES;
 type EnemyTextureState = keyof (typeof ENEMY_TEXTURES)[EnemyTextureTier];
@@ -122,11 +131,14 @@ export class GameScene extends Phaser.Scene {
     private spawner!: EnemySpawner;
     private towerSystem = new TowerSystem();
     private projectileSystem = new ProjectileSystem();
+    private baseSprite!: Phaser.GameObjects.Image;
     private towers: TowerState[] = [];
     private enemies: EnemyState[] = [];
     private projectiles: ProjectileState[] = [];
     private explosions: ExplosionVisual[] = [];
     private baseHealth = GAME_CONFIG.baseHealth;
+    private baseDamageFlashMs = 0;
+    private difficulty: GameDifficulty = 'medium';
     private elapsedMs = 0;
     private kills = 0;
     private answered = 0;
@@ -153,6 +165,7 @@ export class GameScene extends Phaser.Scene {
     create(): void {
         const seedParam = new URLSearchParams(window.location.search).get('seed');
         const seed = seedParam ? SeededRandom.hash(seedParam) : Date.now() % 1000000000;
+        this.difficulty = this.readSavedDifficulty();
         this.generatedMap = generateMap(seed);
         this.rebuildFlowField();
         this.graphics = this.add.graphics().setDepth(3);
@@ -167,6 +180,7 @@ export class GameScene extends Phaser.Scene {
         });
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.handlePointerDown(pointer));
         this.registerDebugKeys();
+        this.setupSettingsControls();
         this.installBrowserHooks();
         this.updateHud();
         this.render();
@@ -178,21 +192,32 @@ export class GameScene extends Phaser.Scene {
             return;
         }
         this.elapsedMs += deltaMs;
-        this.enemies.push(...this.spawner.update(deltaMs, this.towers));
+        this.baseDamageFlashMs = Math.max(0, this.baseDamageFlashMs - deltaMs);
+        this.enemies.push(...this.spawner.update(deltaMs, this.towers, {
+            difficulty: this.difficulty,
+            baseHealthPercent: this.baseHealth / GAME_CONFIG.baseHealth,
+            activeEnemyCount: this.enemies.length,
+        }));
         for (const enemy of this.enemies) {
             enemy.hurtFlashMs = Math.max(0, enemy.hurtFlashMs - deltaMs);
         }
 
         const enemySurvivors: EnemyState[] = [];
+        let baseDamageTaken = 0;
         for (const enemy of this.enemies) {
             const reachedBase = updateEnemy(enemy, deltaMs / 1000, this.flowField, this.emergencyFlowField, this.generatedMap.grid, GAME_CONFIG.map, this.enemies);
             if (reachedBase) {
+                const previousHealth = this.baseHealth;
                 this.baseHealth = Math.max(0, this.baseHealth - enemy.baseDamage);
+                baseDamageTaken += previousHealth - this.baseHealth;
             } else if (enemy.health > 0) {
                 enemySurvivors.push(enemy);
             }
         }
         this.enemies = enemySurvivors;
+        if (baseDamageTaken > 0) {
+            this.flashBaseDamage();
+        }
 
         const towerResult = this.towerSystem.update(deltaMs, this.towers, this.enemies, this.generatedMap.grid, GAME_CONFIG.map, this.flowField);
         this.projectiles.push(...towerResult.projectiles);
@@ -318,12 +343,77 @@ export class GameScene extends Phaser.Scene {
         keyboard?.on('keydown-L', () => { this.debug.los = !this.debug.los; });
     }
 
+    private setupSettingsControls(): void {
+        const button = document.querySelector<HTMLButtonElement>('[data-testid="settings-button"]')!;
+        const popup = document.querySelector<HTMLElement>('[data-testid="settings-popup"]')!;
+        const options = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-difficulty-option]'));
+        const closePopup = () => {
+            popup.hidden = true;
+            button.setAttribute('aria-expanded', 'false');
+        };
+
+        button.addEventListener('click', () => {
+            const shouldOpen = popup.hidden;
+            popup.hidden = !shouldOpen;
+            button.setAttribute('aria-expanded', `${shouldOpen}`);
+        });
+        for (const option of options) {
+            option.addEventListener('click', () => {
+                const value = option.dataset.difficultyOption;
+                if (!value || !isGameDifficulty(value)) {
+                    return;
+                }
+                this.setDifficulty(value);
+                closePopup();
+            });
+        }
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                closePopup();
+            }
+        });
+        this.syncSettingsControls();
+    }
+
+    private readSavedDifficulty(): GameDifficulty {
+        const savedDifficulty = window.localStorage.getItem(DIFFICULTY_STORAGE_KEY);
+        return savedDifficulty && isGameDifficulty(savedDifficulty) ? savedDifficulty : 'medium';
+    }
+
+    private setDifficulty(difficulty: GameDifficulty): void {
+        this.difficulty = difficulty;
+        window.localStorage.setItem(DIFFICULTY_STORAGE_KEY, difficulty);
+        this.syncSettingsControls();
+    }
+
+    private syncSettingsControls(): void {
+        for (const option of document.querySelectorAll<HTMLButtonElement>('[data-difficulty-option]')) {
+            const isSelected = option.dataset.difficultyOption === this.difficulty;
+            option.setAttribute('aria-pressed', `${isSelected}`);
+        }
+        const popup = document.querySelector<HTMLElement>('[data-testid="settings-popup"]');
+        if (popup) {
+            popup.setAttribute('aria-label', `Settings, difficulty ${DIFFICULTY_LABELS[this.difficulty]}`);
+        }
+    }
+
     private updateHud(): void {
+        const healthPercent = Math.max(0, Math.min(1, this.baseHealth / GAME_CONFIG.baseHealth));
         document.querySelector('[data-stat="health"]')!.textContent = `${Math.ceil(this.baseHealth)}`;
+        document.querySelector<HTMLElement>('[data-stat="base-fill"]')!.style.transform = `scaleX(${healthPercent})`;
+        document.querySelector<HTMLElement>('[data-stat="base-meter"]')!.setAttribute('aria-valuenow', `${Math.ceil(this.baseHealth)}`);
         document.querySelector('[data-stat="time"]')!.textContent = this.formatTime(this.elapsedMs);
         document.querySelector('[data-stat="kills"]')!.textContent = `${this.kills}`;
         const accuracy = this.answered === 0 ? '0/0' : `${this.correctAnswers}/${this.answered} (${Math.round((this.correctAnswers / this.answered) * 100)}%)`;
         document.querySelector('[data-stat="accuracy"]')!.textContent = accuracy;
+    }
+
+    private flashBaseDamage(): void {
+        this.baseDamageFlashMs = 360;
+        const hud = document.querySelector<HTMLElement>('#hud')!;
+        hud.classList.remove('base-hit');
+        void hud.offsetWidth;
+        hud.classList.add('base-hit');
     }
 
     private endGame(): void {
@@ -344,6 +434,7 @@ export class GameScene extends Phaser.Scene {
         this.graphics.clear();
         this.debugGraphics.clear();
         this.renderMap();
+        this.renderBaseDamageFlash();
         this.renderDebugLosBlocks();
         this.renderTowerRanges();
         this.renderFlowDebug();
@@ -383,6 +474,21 @@ export class GameScene extends Phaser.Scene {
             cellSize * 3 - 2,
             cellSize * 3 - 2,
         );
+    }
+
+    private renderBaseDamageFlash(): void {
+        if (this.baseDamageFlashMs <= 0) {
+            this.baseSprite.clearTint();
+            return;
+        }
+        const { base } = this.generatedMap;
+        const { originX, originY, cellSize } = GAME_CONFIG.map;
+        const alpha = Math.max(0, Math.min(1, this.baseDamageFlashMs / 360));
+        this.baseSprite.setTint(0xff6b6b);
+        this.graphics.fillStyle(0xe85d75, alpha * 0.26);
+        this.graphics.fillRect(originX + (base.x - 1) * cellSize, originY + (base.y - 1) * cellSize, cellSize * 3, cellSize * 3);
+        this.graphics.lineStyle(4, 0xff2d55, alpha * 0.9);
+        this.graphics.strokeRect(originX + (base.x - 1) * cellSize + 2, originY + (base.y - 1) * cellSize + 2, cellSize * 3 - 4, cellSize * 3 - 4);
     }
 
     private renderTowerRanges(): void {
@@ -586,7 +692,7 @@ export class GameScene extends Phaser.Scene {
         });
 
         const baseCenter = cellCenter(base, GAME_CONFIG.map);
-        this.add.image(baseCenter.x, baseCenter.y, SPRITE_PATHS.base).setDisplaySize(cellSize * 3, cellSize * 3).setDepth(1);
+        this.baseSprite = this.add.image(baseCenter.x, baseCenter.y, SPRITE_PATHS.base).setDisplaySize(cellSize * 3, cellSize * 3).setDepth(1);
     }
 
     private getTerrainTextureKey(terrain: TerrainType, x: number, y: number): string {
@@ -637,6 +743,8 @@ export class GameScene extends Phaser.Scene {
             getEnemyCount: () => this.enemies.length,
             getEnemySnapshot: () => this.enemies.map((enemy) => ({ id: enemy.id, x: enemy.x, y: enemy.y, health: enemy.health })),
             getBaseHealth: () => this.baseHealth,
+            getDifficulty: () => this.difficulty,
+            setDifficulty: (difficulty: GameDifficulty) => this.setDifficulty(difficulty),
             spawnEnemyNearBase: () => this.spawnEnemyNearBase(),
         };
         (window as unknown as { vocabAnnihilation: typeof hooks }).vocabAnnihilation = hooks;

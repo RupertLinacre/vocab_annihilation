@@ -25,6 +25,25 @@ describe('enemy spawn pressure', () => {
         expect(defended.enemyPressure).toBeGreaterThan(noTowers.enemyPressure);
     });
 
+    it('uses difficulty to control how quickly pressure ramps', () => {
+        const veryEasy = calculateSpawnPressure(90, 120, { difficulty: 'veryEasy' });
+        const medium = calculateSpawnPressure(90, 120, { difficulty: 'medium' });
+        const veryHard = calculateSpawnPressure(90, 120, { difficulty: 'veryHard' });
+
+        expect(medium.spawnRatePerSecond).toBeGreaterThan(veryEasy.spawnRatePerSecond);
+        expect(veryHard.spawnRatePerSecond).toBeGreaterThan(medium.spawnRatePerSecond);
+        expect(veryHard.intervalMs).toBeLessThan(veryEasy.intervalMs);
+    });
+
+    it('backs off tower pressure when the base is damaged or enemies are crowding the map', () => {
+        const cruising = calculateSpawnPressure(90, 180, { baseHealthPercent: 1, activeEnemyCount: 2 });
+        const struggling = calculateSpawnPressure(90, 180, { baseHealthPercent: 0.42, activeEnemyCount: 24 });
+
+        expect(struggling.performanceMultiplier).toBeLessThan(cruising.performanceMultiplier);
+        expect(struggling.towerSpawnRateBonusPerSecond).toBeLessThan(cruising.towerSpawnRateBonusPerSecond);
+        expect(struggling.baseSpawnRatePerSecond).toBe(cruising.baseSpawnRatePerSecond);
+    });
+
     it('spawns only scouts in the opening seconds', () => {
         const spawner = new EnemySpawner([{ x: 0, y: 0 }], GAME_CONFIG.map, new SeededRandom('opening-spawns'));
         const heavyDefense: TowerState[] = [

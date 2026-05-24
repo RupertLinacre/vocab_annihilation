@@ -12,10 +12,33 @@
         <div id="game-frame">
             <div id="game-root" data-testid="game-root"></div>
             <section id="hud" aria-label="Game status">
-                <span>Base <strong data-stat="health">100</strong></span>
+                <span class="base-status">Base <strong data-stat="health">100</strong>
+                    <span class="base-meter" role="meter" aria-label="Base life" aria-valuemin="0" aria-valuemax="100"
+                        aria-valuenow="100" data-stat="base-meter">
+                        <span data-stat="base-fill"></span>
+                    </span>
+                </span>
                 <span>Time <strong data-stat="time">0:00</strong></span>
                 <span>Kills <strong data-stat="kills">0</strong></span>
                 <span>Vocab <strong data-stat="accuracy">0/0</strong></span>
+            </section>
+            <button id="settings-button" class="icon-button settings-button" type="button" aria-label="Settings"
+                aria-expanded="false" aria-controls="settings-popup" data-testid="settings-button">⚙</button>
+            <section id="settings-popup" class="settings-popup" hidden aria-label="Settings"
+                data-testid="settings-popup">
+                <h2>Difficulty</h2>
+                <div class="settings-options" role="group" aria-label="Difficulty">
+                    <button type="button" class="settings-option" data-difficulty-option="veryEasy"
+                        data-testid="difficulty-veryEasy">Very easy</button>
+                    <button type="button" class="settings-option" data-difficulty-option="easy"
+                        data-testid="difficulty-easy">Easy</button>
+                    <button type="button" class="settings-option" data-difficulty-option="medium"
+                        data-testid="difficulty-medium">Medium</button>
+                    <button type="button" class="settings-option" data-difficulty-option="hard"
+                        data-testid="difficulty-hard">Hard</button>
+                    <button type="button" class="settings-option" data-difficulty-option="veryHard"
+                        data-testid="difficulty-veryHard">Very hard</button>
+                </div>
             </section>
             <section id="bottom-panel" class="bottom-panel is-open" aria-live="polite" data-testid="bottom-panel">
                 <div class="panel-toggle-row">
