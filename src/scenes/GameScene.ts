@@ -178,7 +178,7 @@ export class GameScene extends Phaser.Scene {
             return;
         }
         this.elapsedMs += deltaMs;
-        this.enemies.push(...this.spawner.update(deltaMs));
+        this.enemies.push(...this.spawner.update(deltaMs, this.towers));
         for (const enemy of this.enemies) {
             enemy.hurtFlashMs = Math.max(0, enemy.hurtFlashMs - deltaMs);
         }

@@ -40,6 +40,29 @@ export function upgradeTower(tower: TowerState): boolean {
     return true;
 }
 
+export function calculateTowerVolleyDamage(tower: Pick<TowerState, 'type' | 'level'>): number {
+    const stats = getTowerStats(tower);
+    if (stats.pelletCount) {
+        return stats.damage * stats.pelletCount;
+    }
+    if (stats.missileCount) {
+        return stats.damage * stats.missileCount;
+    }
+    if (stats.fragmentCount && stats.fragmentDamage) {
+        return stats.damage + stats.fragmentCount * stats.fragmentDamage;
+    }
+    return stats.damage;
+}
+
+export function calculateTowerDamagePerSecond(tower: Pick<TowerState, 'type' | 'level'>): number {
+    const stats = getTowerStats(tower);
+    return calculateTowerVolleyDamage(tower) / (stats.cooldownMs / 1000);
+}
+
+export function calculateTotalTowerDamagePerSecond(towers: readonly Pick<TowerState, 'type' | 'level'>[]): number {
+    return towers.reduce((total, tower) => total + calculateTowerDamagePerSecond(tower), 0);
+}
+
 export function selectTowerTarget(tower: TowerState, enemies: readonly EnemyState[], grid: Grid, geometry: MapGeometry, flowField: FlowField): EnemyState | undefined {
     const stats = getTowerStats(tower);
     const towerCenter = cellCenter({ x: tower.gridX, y: tower.gridY }, geometry);
