@@ -34,69 +34,216 @@ All towers start at level 1 and can be upgraded to level 5.
 
 Single-target bullet tower. Fires one bullet straight at its target.
 
-| Level | Build or upgrade step | Range | Fire interval | Projectiles per shot | Projectile speed | Damage each | Total damage if all connect |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Build with `easy` question | 150 | 660 ms | 1 bullet | 420 | 13 | 13 |
-| 2 | Upgrade with `easy` question | 168 | 540 ms | 1 bullet | 430 | 15 | 15 |
-| 3 | Upgrade with `medium` question | 186 | 440 ms | 1 bullet | 440 | 17 | 17 |
-| 4 | Upgrade with `hard` question | 205 | 360 ms | 1 bullet | 450 | 20 | 20 |
-| 5 | Upgrade with `veryHard` question | 225 | 290 ms | 1 bullet | 465 | 24 | 24 |
+- Level 1
+	- Step: Build with `easy` question
+	- Range: `150`
+	- Fire interval: `660 ms`
+	- Projectiles per shot: `1 bullet`
+	- Projectile speed: `420`
+	- Damage each: `13`
+	- Total damage if all connect: `13`
+- Level 2
+	- Step: Upgrade with `easy` question
+	- Range: `168`
+	- Fire interval: `540 ms`
+	- Projectiles per shot: `1 bullet`
+	- Projectile speed: `430`
+	- Damage each: `15`
+	- Total damage if all connect: `15`
+- Level 3
+	- Step: Upgrade with `medium` question
+	- Range: `186`
+	- Fire interval: `440 ms`
+	- Projectiles per shot: `1 bullet`
+	- Projectile speed: `440`
+	- Damage each: `17`
+	- Total damage if all connect: `17`
+- Level 4
+	- Step: Upgrade with `hard` question
+	- Range: `205`
+	- Fire interval: `360 ms`
+	- Projectiles per shot: `1 bullet`
+	- Projectile speed: `450`
+	- Damage each: `20`
+	- Total damage if all connect: `20`
+- Level 5
+	- Step: Upgrade with `veryHard` question
+	- Range: `225`
+	- Fire interval: `290 ms`
+	- Projectiles per shot: `1 bullet`
+	- Projectile speed: `465`
+	- Damage each: `24`
+	- Total damage if all connect: `24`
 
 ## Medium Spray Tower
 
 Shorter-range spread tower. Fires multiple pellets in a cone.
 
-| Level | Build or upgrade step | Range | Fire interval | Projectiles per shot | Projectile speed | Damage each | Total damage if all connect |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Build with `medium` question | 138 | 980 ms | 3 pellets | 390 | 7 | 21 |
-| 2 | Upgrade with `easy` question | 158 | 910 ms | 4 pellets | 400 | 8 | 32 |
-| 3 | Upgrade with `medium` question | 178 | 830 ms | 5 pellets | 410 | 9 | 45 |
-| 4 | Upgrade with `hard` question | 198 | 760 ms | 6 pellets | 425 | 10 | 60 |
-| 5 | Upgrade with `veryHard` question | 220 | 680 ms | 7 pellets | 440 | 12 | 84 |
-
-Spray spread width by level:
-
-| Level | Spread |
-| --- | ---: |
-| 1 | 0.42 radians |
-| 2 | 0.48 radians |
-| 3 | 0.54 radians |
-| 4 | 0.60 radians |
-| 5 | 0.66 radians |
+- Level 1
+	- Step: Build with `medium` question
+	- Range: `138`
+	- Fire interval: `980 ms`
+	- Projectiles per shot: `3 pellets`
+	- Projectile speed: `390`
+	- Damage each: `7`
+	- Total damage if all connect: `21`
+	- Spread: `0.42 radians`
+- Level 2
+	- Step: Upgrade with `easy` question
+	- Range: `158`
+	- Fire interval: `910 ms`
+	- Projectiles per shot: `4 pellets`
+	- Projectile speed: `400`
+	- Damage each: `8`
+	- Total damage if all connect: `32`
+	- Spread: `0.48 radians`
+- Level 3
+	- Step: Upgrade with `medium` question
+	- Range: `178`
+	- Fire interval: `830 ms`
+	- Projectiles per shot: `5 pellets`
+	- Projectile speed: `410`
+	- Damage each: `9`
+	- Total damage if all connect: `45`
+	- Spread: `0.54 radians`
+- Level 4
+	- Step: Upgrade with `hard` question
+	- Range: `198`
+	- Fire interval: `760 ms`
+	- Projectiles per shot: `6 pellets`
+	- Projectile speed: `425`
+	- Damage each: `10`
+	- Total damage if all connect: `60`
+	- Spread: `0.60 radians`
+- Level 5
+	- Step: Upgrade with `veryHard` question
+	- Range: `220`
+	- Fire interval: `680 ms`
+	- Projectiles per shot: `7 pellets`
+	- Projectile speed: `440`
+	- Damage each: `12`
+	- Total damage if all connect: `84`
+	- Spread: `0.66 radians`
 
 ## Hard Missile Tower
 
 Long-range homing tower. Fires guided missiles that track a target.
 
-| Level | Build or upgrade step | Range | Fire interval | Projectiles per shot | Homing speed | Damage each | Total damage if all connect |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Build with `hard` question | 180 | 1320 ms | 1 missile | 165 | 25 | 25 |
-| 2 | Upgrade with `easy` question | 202 | 1210 ms | 1 missile | 185 | 31 | 31 |
-| 3 | Upgrade with `medium` question | 226 | 1110 ms | 2 missiles | 205 | 36 | 72 |
-| 4 | Upgrade with `hard` question | 252 | 1010 ms | 2 missiles | 230 | 43 | 86 |
-| 5 | Upgrade with `veryHard` question | 282 | 920 ms | 3 missiles | 255 | 50 | 150 |
-
-Missile turn rate by level:
-
-| Level | Turn rate |
-| --- | ---: |
-| 1 | 2.00 radians/sec |
-| 2 | 2.25 radians/sec |
-| 3 | 2.55 radians/sec |
-| 4 | 2.85 radians/sec |
-| 5 | 3.15 radians/sec |
+- Level 1
+	- Step: Build with `hard` question
+	- Range: `180`
+	- Fire interval: `1320 ms`
+	- Projectiles per shot: `1 missile`
+	- Homing speed: `165`
+	- Launch speed: `90.75` (55% of homing speed)
+	- Damage each: `25`
+	- Total damage if all connect: `25`
+	- Turn rate: `2.00 radians/sec`
+- Level 2
+	- Step: Upgrade with `easy` question
+	- Range: `202`
+	- Fire interval: `1210 ms`
+	- Projectiles per shot: `1 missile`
+	- Homing speed: `185`
+	- Launch speed: `101.75` (55% of homing speed)
+	- Damage each: `31`
+	- Total damage if all connect: `31`
+	- Turn rate: `2.25 radians/sec`
+- Level 3
+	- Step: Upgrade with `medium` question
+	- Range: `226`
+	- Fire interval: `1110 ms`
+	- Projectiles per shot: `2 missiles`
+	- Homing speed: `205`
+	- Launch speed: `112.75` (55% of homing speed)
+	- Damage each: `36`
+	- Total damage if all connect: `72`
+	- Turn rate: `2.55 radians/sec`
+- Level 4
+	- Step: Upgrade with `hard` question
+	- Range: `252`
+	- Fire interval: `1010 ms`
+	- Projectiles per shot: `2 missiles`
+	- Homing speed: `230`
+	- Launch speed: `126.5` (55% of homing speed)
+	- Damage each: `43`
+	- Total damage if all connect: `86`
+	- Turn rate: `2.85 radians/sec`
+- Level 5
+	- Step: Upgrade with `veryHard` question
+	- Range: `282`
+	- Fire interval: `920 ms`
+	- Projectiles per shot: `3 missiles`
+	- Homing speed: `255`
+	- Launch speed: `140.25` (55% of homing speed)
+	- Damage each: `50`
+	- Total damage if all connect: `150`
+	- Turn rate: `3.15 radians/sec`
 
 ## Very Hard Cluster Tower
 
 Area-damage tower. Fires one cluster shell that explodes on hit and spawns fragments.
 
-| Level | Build or upgrade step | Range | Fire interval | Projectiles per shot | Shell speed | Shell max damage | Explosion radius | Fragments on impact | Fragment damage each | Fragment speed | Total damage if all connect |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | Build with `veryHard` question | 170 | 1920 ms | 1 shell | 260 | 19 | 54 | 5 | 6 | 260 | 49 |
-| 2 | Upgrade with `easy` question | 195 | 1780 ms | 1 shell | 275 | 24 | 64 | 6 | 8 | 260 | 72 |
-| 3 | Upgrade with `medium` question | 220 | 1640 ms | 1 shell | 292 | 29 | 74 | 8 | 9 | 260 | 101 |
-| 4 | Upgrade with `hard` question | 246 | 1500 ms | 1 shell | 310 | 35 | 86 | 9 | 11 | 260 | 134 |
-| 5 | Upgrade with `veryHard` question | 274 | 1360 ms | 1 shell | 330 | 42 | 98 | 12 | 13 | 260 | 198 |
+- Level 1
+	- Step: Build with `veryHard` question
+	- Range: `170`
+	- Fire interval: `1920 ms`
+	- Projectiles per shot: `1 shell`
+	- Shell speed: `260`
+	- Shell max damage: `19`
+	- Explosion radius: `54`
+	- Fragments on impact: `5`
+	- Fragment damage each: `6`
+	- Fragment speed: `260`
+	- Total damage if all connect: `49`
+- Level 2
+	- Step: Upgrade with `easy` question
+	- Range: `195`
+	- Fire interval: `1780 ms`
+	- Projectiles per shot: `1 shell`
+	- Shell speed: `275`
+	- Shell max damage: `24`
+	- Explosion radius: `64`
+	- Fragments on impact: `6`
+	- Fragment damage each: `8`
+	- Fragment speed: `260`
+	- Total damage if all connect: `72`
+- Level 3
+	- Step: Upgrade with `medium` question
+	- Range: `220`
+	- Fire interval: `1640 ms`
+	- Projectiles per shot: `1 shell`
+	- Shell speed: `292`
+	- Shell max damage: `29`
+	- Explosion radius: `74`
+	- Fragments on impact: `8`
+	- Fragment damage each: `9`
+	- Fragment speed: `260`
+	- Total damage if all connect: `101`
+- Level 4
+	- Step: Upgrade with `hard` question
+	- Range: `246`
+	- Fire interval: `1500 ms`
+	- Projectiles per shot: `1 shell`
+	- Shell speed: `310`
+	- Shell max damage: `35`
+	- Explosion radius: `86`
+	- Fragments on impact: `9`
+	- Fragment damage each: `11`
+	- Fragment speed: `260`
+	- Total damage if all connect: `134`
+- Level 5
+	- Step: Upgrade with `veryHard` question
+	- Range: `274`
+	- Fire interval: `1360 ms`
+	- Projectiles per shot: `1 shell`
+	- Shell speed: `330`
+	- Shell max damage: `42`
+	- Explosion radius: `98`
+	- Fragments on impact: `12`
+	- Fragment damage each: `13`
+	- Fragment speed: `260`
+	- Total damage if all connect: `198`
 
 Cluster tower damage details:
 
