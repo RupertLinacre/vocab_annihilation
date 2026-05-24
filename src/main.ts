@@ -9,9 +9,17 @@ const config: Phaser.Types.Core.GameConfig = {
     width: GAME_CONFIG.canvasWidth,
     height: GAME_CONFIG.canvasHeight,
     backgroundColor: '#132119',
+    render: {
+        antialias: true,
+        antialiasGL: true,
+        pixelArt: false,
+        roundPixels: false,
+        mipmapFilter: 'LINEAR_MIPMAP_LINEAR',
+    },
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
+        autoRound: true,
     },
     scene: [GameScene],
 };

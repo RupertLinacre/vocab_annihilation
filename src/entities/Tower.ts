@@ -1,5 +1,5 @@
 import type { EnemyState, MapGeometry, TowerDifficulty, TowerState, TowerType } from '../types';
-import { TOWER_DIFFICULTY_TO_TYPE } from '../config/gameConfig';
+import { TOWER_DIFFICULTY_TO_TYPE, TOWER_STATS, TOWER_UPGRADE_DIFFICULTIES } from '../config/gameConfig';
 import { cellCenter, Grid, worldToGrid } from '../map/Grid';
 import { hasLineOfSight } from '../map/LineOfSight';
 import type { FlowField } from '../pathfinding/FlowField';
@@ -13,21 +13,22 @@ export function towerTypeForDifficulty(difficulty: TowerDifficulty): TowerType {
     return TOWER_DIFFICULTY_TO_TYPE[difficulty];
 }
 
-export function getUpgradeQuestionDifficulty(nextLevel: number): TowerDifficulty {
-    if (nextLevel <= 2) {
-        return 'easy';
-    }
-    if (nextLevel === 3) {
-        return 'medium';
-    }
-    if (nextLevel === 4) {
-        return 'hard';
-    }
-    return 'veryHard';
+export function getMaxTowerLevel(type: TowerType): number {
+    return TOWER_STATS[type].length;
+}
+
+export function getUpgradeQuestionDifficulty(nextLevel: number): TowerDifficulty;
+export function getUpgradeQuestionDifficulty(tower: Pick<TowerState, 'type'>, nextLevel: number): TowerDifficulty;
+export function getUpgradeQuestionDifficulty(towerOrNextLevel: Pick<TowerState, 'type'> | number, nextLevel?: number): TowerDifficulty {
+    const towerType = typeof towerOrNextLevel === 'number' ? 'easy' : towerOrNextLevel.type;
+    const targetLevel = typeof towerOrNextLevel === 'number' ? towerOrNextLevel : nextLevel ?? 2;
+    const difficulties = TOWER_UPGRADE_DIFFICULTIES[towerType];
+    const difficultyIndex = Math.max(0, Math.min(difficulties.length - 1, targetLevel - 2));
+    return difficulties[difficultyIndex];
 }
 
 export function canUpgradeTower(tower: TowerState): boolean {
-    return tower.level < 5;
+    return tower.level < getMaxTowerLevel(tower.type);
 }
 
 export function upgradeTower(tower: TowerState): boolean {

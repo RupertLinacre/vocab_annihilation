@@ -38,6 +38,13 @@ export const TOWER_DIFFICULTY_TO_TYPE: Record<TowerDifficulty, TowerType> = {
     veryHard: 'cluster',
 };
 
+export const TOWER_UPGRADE_DIFFICULTIES: Record<TowerType, TowerDifficulty[]> = {
+    easy: ['easy', 'medium', 'hard', 'veryHard'],
+    spray: ['easy', 'medium', 'hard', 'veryHard'],
+    missile: ['easy', 'medium', 'hard', 'veryHard'],
+    cluster: ['easy', 'medium', 'hard', 'veryHard'],
+};
+
 export const TOWER_LABELS: Record<TowerType, string> = {
     easy: 'Easy Bullet Tower',
     spray: 'Medium Spray Tower',

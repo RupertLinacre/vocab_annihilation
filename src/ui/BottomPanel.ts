@@ -68,7 +68,7 @@ export class BottomPanel {
         }
 
         const nextLevel = tower.level + 1;
-        this.showQuestion({ kind: 'upgrade', tower, difficulty: getUpgradeQuestionDifficulty(nextLevel) });
+        this.showQuestion({ kind: 'upgrade', tower, difficulty: getUpgradeQuestionDifficulty(tower, nextLevel) });
     }
 
     close(): void {

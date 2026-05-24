@@ -74,6 +74,10 @@ const BUILD_SHORTCUTS: Record<string, BuildDifficultySelection> = {
     '5': 'random',
 };
 
+const TOWER_SPRITE_MAX_SIZE = GAME_CONFIG.map.cellSize * 1.2;
+const ENEMY_SPRITE_MIN_SIZE = GAME_CONFIG.map.cellSize * 0.9;
+const ENEMY_SPRITE_MAX_SIZE = GAME_CONFIG.map.cellSize * 1.28;
+
 type EnemyTextureTier = keyof typeof ENEMY_TEXTURES;
 type EnemyTextureState = keyof (typeof ENEMY_TEXTURES)[EnemyTextureTier];
 
@@ -374,7 +378,7 @@ export class GameScene extends Phaser.Scene {
             }
             sprite.setTexture(TOWER_TEXTURES[tower.type]);
             sprite.setPosition(center.x, center.y);
-            sprite.setDisplaySize(cellSize, cellSize);
+            this.setSpriteMaxSize(sprite, TOWER_SPRITE_MAX_SIZE);
             sprite.setAlpha(tower === this.selectedTower ? 1 : 0.96);
 
             this.graphics.fillStyle(0x101614, 0.9);
@@ -403,7 +407,7 @@ export class GameScene extends Phaser.Scene {
             }
             sprite.setTexture(this.getEnemyTextureKey(enemy));
             sprite.setPosition(enemy.x, enemy.y);
-            this.setEnemySpriteSize(sprite, cellSize);
+            this.setEnemySpriteSize(sprite, this.getEnemySpriteMaxSize(enemy, cellSize));
             sprite.setDepth(2 + enemy.y / 10000);
 
             const barWidth = enemy.radius * 2.1;
@@ -423,8 +427,17 @@ export class GameScene extends Phaser.Scene {
     }
 
     private setEnemySpriteSize(sprite: Phaser.GameObjects.Image, maxSize: number): void {
+        this.setSpriteMaxSize(sprite, maxSize);
+    }
+
+    private getEnemySpriteMaxSize(enemy: EnemyState, cellSize: number): number {
+        return Math.max(ENEMY_SPRITE_MIN_SIZE, Math.min(ENEMY_SPRITE_MAX_SIZE, enemy.radius * 3.1, cellSize * 1.3));
+    }
+
+    private setSpriteMaxSize(sprite: Phaser.GameObjects.Image, maxSize: number): void {
         sprite.setScale(1);
-        sprite.setScale(maxSize / Math.max(sprite.width, sprite.height, 1));
+        const scale = maxSize / Math.max(sprite.width, sprite.height, 1);
+        sprite.setScale(scale);
     }
 
     private renderProjectiles(): void {
