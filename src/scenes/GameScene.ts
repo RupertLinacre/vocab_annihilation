@@ -46,6 +46,18 @@ const SPRITE_PATHS = {
     monster4Hurt: 'sprites/monster_4_hurt.png',
 } as const;
 
+const SOUND_PATHS = {
+    pop: 'audio/pop.mp3',
+    owHurt: 'audio/ow_hurt.mp3',
+    owDeath: 'audio/ow_death.mp3',
+} as const;
+
+const SOUND_KEYS = {
+    pop: 'sound-pop',
+    owHurt: 'sound-ow-hurt',
+    owDeath: 'sound-ow-death',
+} as const;
+
 const TERRAIN_TEXTURES: Record<TerrainType, readonly string[]> = {
     grass: [SPRITE_PATHS.grass1, SPRITE_PATHS.grass2, SPRITE_PATHS.grass3, SPRITE_PATHS.grass4, SPRITE_PATHS.grass5],
     tree: [SPRITE_PATHS.tree1, SPRITE_PATHS.tree2],
@@ -133,6 +145,9 @@ export class GameScene extends Phaser.Scene {
         for (const path of Object.values(SPRITE_PATHS)) {
             this.load.image(path, path);
         }
+        this.load.audio(SOUND_KEYS.pop, SOUND_PATHS.pop);
+        this.load.audio(SOUND_KEYS.owHurt, SOUND_PATHS.owHurt);
+        this.load.audio(SOUND_KEYS.owDeath, SOUND_PATHS.owDeath);
     }
 
     create(): void {
@@ -179,11 +194,16 @@ export class GameScene extends Phaser.Scene {
         }
         this.enemies = enemySurvivors;
 
-        this.projectiles.push(...this.towerSystem.update(deltaMs, this.towers, this.enemies, this.generatedMap.grid, GAME_CONFIG.map, this.flowField));
+        const towerResult = this.towerSystem.update(deltaMs, this.towers, this.enemies, this.generatedMap.grid, GAME_CONFIG.map, this.flowField);
+        this.projectiles.push(...towerResult.projectiles);
+        this.playRepeatedSound(SOUND_KEYS.pop, towerResult.shotsFired, 0.18);
+
         const projectileResult = this.projectileSystem.update(deltaMs, this.projectiles, this.enemies, this.generatedMap.grid, GAME_CONFIG.map);
         this.projectiles = projectileResult.projectiles;
         this.kills += projectileResult.kills;
         this.explosions.push(...projectileResult.explosions);
+        this.playRepeatedSound(SOUND_KEYS.owHurt, projectileResult.hurtSounds, 0.2);
+        this.playRepeatedSound(SOUND_KEYS.owDeath, projectileResult.deathSounds, 0.28);
         this.enemies = this.enemies.filter((enemy) => enemy.health > 0);
         this.explosions = this.explosions
             .map((explosion) => ({ ...explosion, lifeMs: explosion.lifeMs - deltaMs }))
@@ -245,6 +265,16 @@ export class GameScene extends Phaser.Scene {
             this.correctAnswers += 1;
         }
         this.updateHud();
+    }
+
+    private playRepeatedSound(key: string, count: number, volume: number): void {
+        if (count <= 0 || this.sound.locked) {
+            return;
+        }
+        const playCount = Math.min(count, 4);
+        for (let index = 0; index < playCount; index += 1) {
+            this.sound.play(key, { volume });
+        }
     }
 
     private rebuildFlowField(): void {

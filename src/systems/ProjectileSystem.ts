@@ -7,6 +7,8 @@ export interface ProjectileUpdateResult {
     projectiles: ProjectileState[];
     kills: number;
     explosions: { x: number; y: number; radius: number; lifeMs: number }[];
+    hurtSounds: number;
+    deathSounds: number;
 }
 
 function normalize(dx: number, dy: number): { x: number; y: number } {
@@ -29,6 +31,8 @@ export class ProjectileSystem {
         const spawnedFragments: ProjectileState[] = [];
         const explosions: { x: number; y: number; radius: number; lifeMs: number }[] = [];
         let kills = 0;
+        let hurtSounds = 0;
+        let deathSounds = 0;
 
         for (const projectile of projectiles) {
             projectile.lifeMs -= deltaMs;
@@ -47,10 +51,15 @@ export class ProjectileSystem {
             const hit = this.findHitEnemy(projectile, enemies);
             if (hit) {
                 if (projectile.type === 'cluster') {
-                    kills += this.explodeCluster(projectile, enemies, spawnedFragments, explosions);
+                    const result = this.explodeCluster(projectile, enemies, spawnedFragments, explosions);
+                    kills += result.kills;
+                    hurtSounds += result.hurtSounds;
+                    deathSounds += result.deathSounds;
                 } else {
+                    hurtSounds += 1;
                     if (applyDamage(hit, projectile.damage)) {
                         kills += 1;
+                        deathSounds += 1;
                     }
                 }
                 continue;
@@ -59,7 +68,7 @@ export class ProjectileSystem {
             aliveProjectiles.push(projectile);
         }
 
-        return { projectiles: [...aliveProjectiles, ...spawnedFragments], kills, explosions };
+        return { projectiles: [...aliveProjectiles, ...spawnedFragments], kills, explosions, hurtSounds, deathSounds };
     }
 
     private updateMissileVelocity(projectile: ProjectileState, enemies: readonly EnemyState[], deltaMs: number): void {
@@ -88,9 +97,11 @@ export class ProjectileSystem {
         return enemies.find((enemy) => enemy.health > 0 && Math.hypot(enemy.x - projectile.x, enemy.y - projectile.y) <= enemy.radius + projectile.radius);
     }
 
-    private explodeCluster(projectile: ProjectileState, enemies: EnemyState[], fragments: ProjectileState[], explosions: { x: number; y: number; radius: number; lifeMs: number }[]): number {
+    private explodeCluster(projectile: ProjectileState, enemies: EnemyState[], fragments: ProjectileState[], explosions: { x: number; y: number; radius: number; lifeMs: number }[]): { kills: number; hurtSounds: number; deathSounds: number } {
         const radius = projectile.explosionRadius ?? 64;
         let kills = 0;
+        let hurtSounds = 0;
+        let deathSounds = 0;
         for (const enemy of enemies) {
             if (enemy.health <= 0) {
                 continue;
@@ -98,8 +109,10 @@ export class ProjectileSystem {
             const distance = Math.hypot(enemy.x - projectile.x, enemy.y - projectile.y);
             if (distance <= radius) {
                 const falloff = 1 - distance / radius * 0.45;
+                hurtSounds += 1;
                 if (applyDamage(enemy, projectile.damage * falloff)) {
                     kills += 1;
+                    deathSounds += 1;
                 }
             }
         }
@@ -111,6 +124,6 @@ export class ProjectileSystem {
             const fragment = createProjectile(this.nextProjectileId++, 'fragment', projectile.x, projectile.y, Math.cos(angle) * speed, Math.sin(angle) * speed, projectile.fragmentDamage ?? 7, 3.2, 620);
             fragments.push(fragment);
         }
-        return kills;
+        return { kills, hurtSounds, deathSounds };
     }
 }

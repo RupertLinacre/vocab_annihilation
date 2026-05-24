@@ -5,6 +5,11 @@ import { cellCenter, Grid } from '../map/Grid';
 import type { FlowField } from '../pathfinding/FlowField';
 import { createProjectile } from '../entities/Projectile';
 
+export interface TowerUpdateResult {
+    projectiles: ProjectileState[];
+    shotsFired: number;
+}
+
 function normalize(dx: number, dy: number): { x: number; y: number } {
     const length = Math.hypot(dx, dy) || 1;
     return { x: dx / length, y: dy / length };
@@ -13,8 +18,9 @@ function normalize(dx: number, dy: number): { x: number; y: number } {
 export class TowerSystem {
     private nextProjectileId = 1;
 
-    update(deltaMs: number, towers: TowerState[], enemies: readonly EnemyState[], grid: Grid, geometry: MapGeometry, flowField: FlowField): ProjectileState[] {
+    update(deltaMs: number, towers: TowerState[], enemies: readonly EnemyState[], grid: Grid, geometry: MapGeometry, flowField: FlowField): TowerUpdateResult {
         const projectiles: ProjectileState[] = [];
+        let shotsFired = 0;
         for (const tower of towers) {
             tower.cooldownMs -= deltaMs;
             if (tower.cooldownMs > 0) {
@@ -62,7 +68,8 @@ export class TowerSystem {
                 projectiles.push(projectile);
             }
             tower.cooldownMs = stats.cooldownMs;
+            shotsFired += 1;
         }
-        return projectiles;
+        return { projectiles, shotsFired };
     }
 }
