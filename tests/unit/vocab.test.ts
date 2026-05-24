@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SeededRandom } from '../../src/core/SeededRandom';
-import { getUpgradeQuestionDifficulty } from '../../src/entities/Tower';
+import { canUpgradeTower, createTower, getUpgradeQuestionDifficulty, upgradeTower } from '../../src/entities/Tower';
 import { VocabQuestionSystem } from '../../src/systems/VocabQuestionSystem';
 import type { NormalizedVocabEntry } from '../../src/types';
 
@@ -14,11 +14,34 @@ const entries: NormalizedVocabEntry[] = [
 ];
 
 describe('vocabulary questions and upgrades', () => {
-    it('uses the required upgrade difficulty progression', () => {
-        expect(getUpgradeQuestionDifficulty(2)).toBe('easy');
-        expect(getUpgradeQuestionDifficulty(3)).toBe('medium');
-        expect(getUpgradeQuestionDifficulty(4)).toBe('hard');
-        expect(getUpgradeQuestionDifficulty(5)).toBe('veryHard');
+    it('uses the required upgrade difficulty progression for each tower type', () => {
+        expect(getUpgradeQuestionDifficulty({ type: 'easy' }, 2)).toBe('easy');
+        expect(getUpgradeQuestionDifficulty({ type: 'easy' }, 3)).toBe('easy');
+        expect(getUpgradeQuestionDifficulty({ type: 'easy' }, 4)).toBe('medium');
+        expect(getUpgradeQuestionDifficulty({ type: 'easy' }, 6)).toBe('hard');
+        expect(getUpgradeQuestionDifficulty({ type: 'easy' }, 8)).toBe('veryHard');
+
+        expect(getUpgradeQuestionDifficulty({ type: 'spray' }, 2)).toBe('medium');
+        expect(getUpgradeQuestionDifficulty({ type: 'spray' }, 5)).toBe('hard');
+        expect(getUpgradeQuestionDifficulty({ type: 'spray' }, 8)).toBe('veryHard');
+
+        expect(getUpgradeQuestionDifficulty({ type: 'missile' }, 2)).toBe('hard');
+        expect(getUpgradeQuestionDifficulty({ type: 'missile' }, 5)).toBe('veryHard');
+
+        expect(getUpgradeQuestionDifficulty({ type: 'cluster' }, 2)).toBe('veryHard');
+        expect(getUpgradeQuestionDifficulty({ type: 'cluster' }, 8)).toBe('veryHard');
+    });
+
+    it('allows towers to upgrade through level 8', () => {
+        const tower = createTower(1, 0, 0, 'easy');
+
+        while (canUpgradeTower(tower)) {
+            expect(upgradeTower(tower)).toBe(true);
+        }
+
+        expect(tower.level).toBe(8);
+        expect(canUpgradeTower(tower)).toBe(false);
+        expect(upgradeTower(tower)).toBe(false);
     });
 
     it('generates three unique answer choices with adjacent fallback distractors', () => {

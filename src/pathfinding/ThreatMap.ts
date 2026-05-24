@@ -10,7 +10,7 @@ export function createEmptyCostGrid(grid: Grid, value = 0): CostGrid {
 }
 
 export function getTowerStats(tower: Pick<TowerState, 'type' | 'level'>) {
-    return TOWER_STATS[tower.type][Math.max(1, Math.min(5, tower.level)) - 1];
+    return TOWER_STATS[tower.type][Math.max(1, Math.min(TOWER_STATS[tower.type].length, tower.level)) - 1];
 }
 
 export function calculateTowerThreatCosts(grid: Grid, towers: readonly TowerState[], geometry: MapGeometry): CostGrid {
