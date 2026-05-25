@@ -10,18 +10,37 @@
 <body>
     <main id="app-shell">
         <div id="game-frame">
-            <div id="game-root" data-testid="game-root"></div>
-            <section id="hud" aria-label="Game status">
-                <span class="base-status">Base <strong data-stat="health">100</strong>
-                    <span class="base-meter" role="meter" aria-label="Base life" aria-valuemin="0" aria-valuemax="100"
-                        aria-valuenow="100" data-stat="base-meter">
-                        <span data-stat="base-fill"></span>
+            <section id="game-topbar" aria-label="Game information">
+                <section id="hud" aria-label="Game status">
+                    <span class="base-status">Base <strong data-stat="health">100</strong>
+                        <span class="base-meter" role="meter" aria-label="Base life" aria-valuemin="0"
+                            aria-valuemax="100" aria-valuenow="100" data-stat="base-meter">
+                            <span data-stat="base-fill"></span>
+                        </span>
                     </span>
-                </span>
-                <span>Time <strong data-stat="time">0:00</strong></span>
-                <span>Kills <strong data-stat="kills">0</strong></span>
-                <span>Vocab <strong data-stat="accuracy">0/0</strong></span>
+                    <span>Time <strong data-stat="time">0:00</strong></span>
+                    <span>Kills <strong data-stat="kills">0</strong></span>
+                    <span>Vocab <strong data-stat="accuracy">0/0</strong></span>
+                </section>
+                <section id="game-messages" aria-live="polite">
+                    <p id="game-status-message" data-testid="game-status-message"></p>
+                </section>
             </section>
+            <div id="game-surface">
+                <div id="game-root" data-testid="game-root"></div>
+                <section id="game-over" class="game-over" hidden data-testid="game-over">
+                    <div>
+                        <p>Base destroyed</p>
+                        <strong data-game-over-time>0:00</strong>
+                    </div>
+                </section>
+                <section id="pause-overlay" class="pause-overlay" hidden data-testid="pause-overlay">
+                    <div>
+                        <p>Paused</p>
+                        <button type="button" class="primary-button" data-testid="resume-button">Resume</button>
+                    </div>
+                </section>
+            </div>
             <button id="settings-button" class="icon-button settings-button" type="button" aria-label="Settings"
                 aria-expanded="false" aria-controls="settings-popup" data-testid="settings-button">⚙</button>
             <section id="settings-popup" class="settings-popup" hidden aria-label="Settings"
@@ -55,18 +74,6 @@
                         aria-label="Collapse difficulty panel" aria-expanded="true">↓</button>
                 </div>
                 <div class="panel-body" data-panel-body></div>
-            </section>
-            <section id="game-over" class="game-over" hidden data-testid="game-over">
-                <div>
-                    <p>Base destroyed</p>
-                    <strong data-game-over-time>0:00</strong>
-                </div>
-            </section>
-            <section id="pause-overlay" class="pause-overlay" hidden data-testid="pause-overlay">
-                <div>
-                    <p>Paused</p>
-                    <button type="button" class="primary-button" data-testid="resume-button">Resume</button>
-                </div>
             </section>
         </div>
     </main>

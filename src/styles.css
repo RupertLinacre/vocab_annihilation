@@ -40,6 +40,8 @@ body {
 
 #game-frame {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: min(100vw - 24px, 1280px);
   aspect-ratio: 16 / 10;
   max-height: calc(100vh - 24px);
@@ -47,6 +49,24 @@ body {
   background: #132119;
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.42);
   overflow: hidden;
+}
+
+#game-topbar {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  min-height: 74px;
+  padding: 12px 56px 12px 12px;
+  border-bottom: 1px solid rgba(247, 240, 214, 0.14);
+  background: linear-gradient(180deg, rgba(12, 18, 16, 0.96), rgba(12, 18, 16, 0.84));
+}
+
+#game-surface {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 #game-root,
@@ -57,10 +77,6 @@ body {
 }
 
 #hud {
-  position: absolute;
-  z-index: 5;
-  top: 12px;
-  left: 12px;
   display: flex;
   gap: 10px;
   align-items: center;
@@ -70,6 +86,37 @@ body {
   backdrop-filter: blur(8px);
   font-size: clamp(12px, 1.1vw, 15px);
   letter-spacing: 0;
+}
+
+#game-messages {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  min-width: 0;
+}
+
+#game-status-message {
+  min-height: 42px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  border: 1px solid rgba(247, 240, 214, 0.14);
+  border-radius: 10px;
+  background: rgba(12, 18, 16, 0.58);
+  color: var(--muted);
+  font-size: clamp(13px, 1.15vw, 16px);
+  line-height: 1.25;
+}
+
+#game-status-message[data-state="paused"] {
+  border-color: rgba(243, 182, 75, 0.52);
+  background: rgba(243, 182, 75, 0.12);
+  color: #fff3cc;
+}
+
+#game-status-message[hidden] {
+  display: none;
 }
 
 #hud span {
@@ -328,6 +375,15 @@ body {
   grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   margin-top: 12px;
+}
+
+.panel-section-title {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-align: center;
 }
 
 .button-row,

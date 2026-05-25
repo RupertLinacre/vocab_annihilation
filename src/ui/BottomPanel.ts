@@ -1,16 +1,14 @@
-import { TOWER_LABELS } from '../config/gameConfig';
-import { SeededRandom } from '../core/SeededRandom';
+import { DIFFICULTY_LABELS, TOWER_LABELS } from '../config/gameConfig';
 import { canUpgradeTower, getUpgradeQuestionDifficulty } from '../entities/Tower';
 import { getTowerStats } from '../pathfinding/ThreatMap';
-import { mapTowerDifficultyToRawDifficulty, RAW_VOCAB_DIFFICULTY_LABELS, type BaseVocabDifficulty, VocabQuestionSystem } from '../systems/VocabQuestionSystem';
+import { VocabQuestionSystem } from '../systems/VocabQuestionSystem';
 import type { GridPoint, TowerDifficulty, TowerState, Vec2, VocabQuestion } from '../types';
 
 const BUILD_DIFFICULTIES: TowerDifficulty[] = ['easy', 'medium', 'hard', 'veryHard'];
-const BUILD_SELECTIONS = [...BUILD_DIFFICULTIES, 'random'] as const;
 const BUILD_MENU_PADDING = 12;
 const BUILD_MENU_OFFSET = 14;
 
-export type BuildDifficultySelection = (typeof BUILD_SELECTIONS)[number];
+export type BuildDifficultySelection = TowerDifficulty;
 
 interface BottomPanelCallbacks {
     onBuild: (cell: GridPoint, difficulty: TowerDifficulty) => void;
@@ -35,11 +33,10 @@ export class BottomPanel {
     private currentQuestion: VocabQuestion | undefined;
     private pendingAction: PendingAction | undefined;
     private questionActive = false;
-    private baseDifficulty: BaseVocabDifficulty = 'reception';
     private selectedBuildDifficulty: BuildDifficultySelection = 'easy';
     private panelExpanded = true;
 
-    constructor(private readonly vocab: VocabQuestionSystem, private readonly rng: SeededRandom, private readonly callbacks: BottomPanelCallbacks) {
+    constructor(private readonly vocab: VocabQuestionSystem, private readonly callbacks: BottomPanelCallbacks) {
         this.buildMenu = document.createElement('section');
         this.buildMenu.className = 'build-popup';
         this.buildMenu.dataset.testid = 'build-popup';
@@ -86,11 +83,6 @@ export class BottomPanel {
 
     setSelectedBuildDifficulty(selection: BuildDifficultySelection): void {
         this.selectedBuildDifficulty = selection;
-        this.renderDifficultySelector();
-    }
-
-    setBaseDifficulty(baseDifficulty: BaseVocabDifficulty): void {
-        this.baseDifficulty = baseDifficulty;
         this.renderDifficultySelector();
     }
 
@@ -153,7 +145,7 @@ export class BottomPanel {
 
         const header = this.createDiv('build-popup-header');
         const heading = this.createDiv('build-popup-head');
-        heading.append(this.createParagraph('panel-kicker build-popup-kicker', this.describeQuestionDifficulty(this.currentQuestion.difficulty)));
+        heading.append(this.createParagraph('panel-kicker build-popup-kicker', DIFFICULTY_LABELS[this.currentQuestion.difficulty]));
 
         const closeButton = this.createButton('icon-button build-popup-close', '×', 'answer-popup-close');
         closeButton.setAttribute('aria-label', 'Close answers');
@@ -215,10 +207,11 @@ export class BottomPanel {
 
     private renderDifficultySelector(): void {
         this.body.innerHTML = '';
+        this.body.append(this.createParagraph('panel-section-title', 'Select tower type'));
         const row = this.createDiv('button-row difficulty-selector-row');
-        BUILD_SELECTIONS.forEach((selection) => {
+        BUILD_DIFFICULTIES.forEach((selection) => {
             const isSelected = selection === this.selectedBuildDifficulty;
-            const label = selection === 'random' ? 'Random' : this.describeQuestionDifficulty(selection);
+            const label = DIFFICULTY_LABELS[selection];
             const button = this.createButton(
                 `difficulty-button difficulty-selector-button${isSelected ? ' is-selected' : ''}`,
                 label,
@@ -231,15 +224,8 @@ export class BottomPanel {
         this.body.append(row);
     }
 
-    private describeQuestionDifficulty(difficulty: TowerDifficulty): string {
-        const rawDifficulty = mapTowerDifficultyToRawDifficulty(difficulty, this.baseDifficulty);
-        return RAW_VOCAB_DIFFICULTY_LABELS[rawDifficulty];
-    }
-
     private resolveBuildDifficulty(): TowerDifficulty {
-        return this.selectedBuildDifficulty === 'random'
-            ? this.rng.choice(BUILD_DIFFICULTIES)
-            : this.selectedBuildDifficulty;
+        return this.selectedBuildDifficulty;
     }
 
     private setExpanded(expanded: boolean): void {

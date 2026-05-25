@@ -50,6 +50,7 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     await expect(page.locator('canvas')).toBeVisible();
     await expect(page.locator('[data-stat="health"]')).toHaveText(/\d+/);
     await expect(page.locator('[data-stat="base-meter"]')).toBeVisible();
+    await expect(page.getByTestId('game-status-message')).toHaveText('Click on a square to place a tower to start game.');
     await expect.poll(() => page.evaluate(() => Boolean(window.vocabAnnihilation))).toBe(true);
 
     await page.getByTestId('settings-button').click();
@@ -70,7 +71,9 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     await page.getByTestId('panel-toggle').click();
     await expect(page.locator('[data-testid="bottom-panel"]')).toHaveClass(/is-open/);
 
-    for (const [key, testId] of [['1', 'select-easy'], ['2', 'select-medium'], ['3', 'select-hard'], ['4', 'select-veryHard'], ['5', 'select-random']] as const) {
+    await expect(page.locator('[data-panel-body]')).toContainText('Select tower type');
+
+    for (const [key, testId] of [['1', 'select-easy'], ['2', 'select-medium'], ['3', 'select-hard'], ['4', 'select-veryHard']] as const) {
         await page.keyboard.press(key);
         await expect(page.getByTestId(testId)).toHaveAttribute('aria-pressed', 'true');
     }
@@ -94,8 +97,9 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     expect(buildable).not.toBeNull();
     await clickGamePoint(page, buildable!.worldX, buildable!.worldY);
     await expect(page.getByTestId('build-popup')).toBeVisible();
-    await expect(page.getByTestId('build-popup')).toContainText('Year 3');
+    await expect(page.getByTestId('build-popup')).toContainText('Hard');
     await expect(page.getByTestId('pause-overlay')).toBeHidden();
+    await expect(page.getByTestId('game-status-message')).toContainText('Game paused');
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.isPaused())).toBe(true);
     const questionPausedElapsedMs = await page.evaluate(() => window.vocabAnnihilation!.getElapsedMs());
     await page.waitForTimeout(150);
@@ -106,6 +110,7 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.isPaused())).toBe(false);
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getTowerCount())).toBe(1);
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getTowerTypes())).toEqual(['missile']);
+    await expect(page.getByTestId('game-status-message')).toBeHidden();
 
     const secondBuildable = await page.evaluate(() => window.vocabAnnihilation!.getFirstBuildableCell());
     expect(secondBuildable).not.toBeNull();

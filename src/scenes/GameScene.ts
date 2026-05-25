@@ -90,7 +90,6 @@ const BUILD_SHORTCUTS: Record<string, BuildDifficultySelection> = {
     '2': 'medium',
     '3': 'hard',
     '4': 'veryHard',
-    '5': 'random',
 };
 
 const TOWER_SPRITE_MAX_SIZE = GAME_CONFIG.map.cellSize * 1.2;
@@ -193,20 +192,20 @@ export class GameScene extends Phaser.Scene {
         this.createMapSprites();
         this.spawner = new EnemySpawner(this.generatedMap.spawns, GAME_CONFIG.map, new SeededRandom(`${seed}:spawns`));
         this.vocabSystem = new VocabQuestionSystem(new SeededRandom(`${seed}:vocab`), normalizeVocab(ALL_VOCAB, this.baseDifficulty));
-        this.panel = new BottomPanel(this.vocabSystem, new SeededRandom(`${seed}:panel`), {
+        this.panel = new BottomPanel(this.vocabSystem, {
             onBuild: (cell, difficulty) => this.buildTower(cell, difficulty),
             onUpgrade: (tower) => this.upgradeExistingTower(tower),
             onAnswered: (correct) => this.recordAnswer(correct),
             onQuestionStateChange: (isActive) => this.setQuestionPause(isActive),
             onClose: () => this.clearSelection(),
         });
-        this.panel.setBaseDifficulty(this.baseDifficulty);
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.handlePointerDown(pointer));
         this.registerDebugKeys();
         this.setupSettingsControls();
         this.setupPauseControls();
         this.installBrowserHooks();
         this.updateHud();
+        this.syncStatusMessage();
         this.render();
     }
 
@@ -298,6 +297,7 @@ export class GameScene extends Phaser.Scene {
         this.towers.push(createTower(this.nextTowerId++, cell.x, cell.y, towerTypeForDifficulty(difficulty)));
         this.spawningUnlocked = true;
         this.rebuildFlowField();
+        this.syncStatusMessage();
     }
 
     private canBuildOnCell(cell: GridPoint): boolean {
@@ -431,6 +431,7 @@ export class GameScene extends Phaser.Scene {
         if (pausedOverlay) {
             pausedOverlay.hidden = !this.manualPauseRequested;
         }
+        this.syncStatusMessage();
     }
 
     private setupPauseControls(): void {
@@ -461,9 +462,39 @@ export class GameScene extends Phaser.Scene {
         this.baseDifficulty = baseDifficulty;
         window.localStorage.setItem(BASE_DIFFICULTY_STORAGE_KEY, baseDifficulty);
         this.vocabSystem.setEntries(normalizeVocab(ALL_VOCAB, baseDifficulty));
-        this.panel.setBaseDifficulty(baseDifficulty);
         this.panel.close();
         this.syncSettingsControls();
+    }
+
+    private syncStatusMessage(): void {
+        const message = document.querySelector<HTMLElement>('[data-testid="game-status-message"]');
+        if (!message) {
+            return;
+        }
+
+        let text = '';
+        let state = 'idle';
+
+        if (this.gameOver) {
+            text = '';
+        } else if (this.questionPauseActive) {
+            text = 'Game paused while you answer the question.';
+            state = 'paused';
+        } else if (this.manualPauseRequested) {
+            text = 'Game paused.';
+            state = 'paused';
+        } else if (!this.spawningUnlocked) {
+            text = 'Click on a square to place a tower to start game.';
+            state = 'instruction';
+        }
+
+        message.hidden = text.length === 0;
+        message.textContent = text;
+        if (text.length === 0) {
+            delete message.dataset.state;
+            return;
+        }
+        message.dataset.state = state;
     }
 
     private syncSettingsControls(): void {
@@ -508,6 +539,7 @@ export class GameScene extends Phaser.Scene {
         const gameOver = document.querySelector<HTMLElement>('[data-testid="game-over"]')!;
         gameOver.hidden = false;
         document.querySelector('[data-game-over-time]')!.textContent = this.formatTime(this.elapsedMs);
+        this.syncStatusMessage();
     }
 
     private formatTime(milliseconds: number): string {
