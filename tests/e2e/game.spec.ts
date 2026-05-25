@@ -16,6 +16,8 @@ declare global {
             getEnemyCount: () => number;
             getEnemySnapshot: () => { id: number; x: number; y: number; health: number }[];
             getBaseHealth: () => number;
+            getElapsedMs: () => number;
+            isPaused: () => boolean;
             getDifficulty: () => string;
             setDifficulty: (difficulty: 'veryEasy' | 'easy' | 'medium' | 'hard' | 'veryHard') => void;
             spawnEnemyNearBase: () => void;
@@ -67,6 +69,16 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
         await page.keyboard.press(key);
         await expect(page.getByTestId(testId)).toHaveAttribute('aria-pressed', 'true');
     }
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('pause-overlay')).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.isPaused())).toBe(true);
+    const pausedElapsedMs = await page.evaluate(() => window.vocabAnnihilation!.getElapsedMs());
+    await page.waitForTimeout(150);
+    expect(await page.evaluate(() => window.vocabAnnihilation!.getElapsedMs())).toBe(pausedElapsedMs);
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('pause-overlay')).toBeHidden();
+    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.isPaused())).toBe(false);
 
     await page.keyboard.press('3');
 

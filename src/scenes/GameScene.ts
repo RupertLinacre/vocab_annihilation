@@ -147,6 +147,7 @@ export class GameScene extends Phaser.Scene {
     private selectedCell: GridPoint | undefined;
     private selectedTower: TowerState | undefined;
     private gameOver = false;
+    private isPaused = false;
     private debug: DebugToggles = { grid: true, ranges: false, flow: false, costs: false, los: false };
 
     constructor() {
@@ -181,13 +182,14 @@ export class GameScene extends Phaser.Scene {
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.handlePointerDown(pointer));
         this.registerDebugKeys();
         this.setupSettingsControls();
+        this.setupPauseControls();
         this.installBrowserHooks();
         this.updateHud();
         this.render();
     }
 
     update(_time: number, deltaMs: number): void {
-        if (this.gameOver) {
+        if (this.gameOver || this.isPaused) {
             this.render();
             return;
         }
@@ -370,9 +372,32 @@ export class GameScene extends Phaser.Scene {
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
                 closePopup();
+                if (!event.repeat) {
+                    this.togglePause();
+                }
             }
         });
         this.syncSettingsControls();
+    }
+
+    private togglePause(): void {
+        if (this.gameOver) {
+            return;
+        }
+        this.setPaused(!this.isPaused);
+    }
+
+    private setPaused(isPaused: boolean): void {
+        this.isPaused = isPaused;
+        const pausedOverlay = document.querySelector<HTMLElement>('[data-testid="pause-overlay"]');
+        if (pausedOverlay) {
+            pausedOverlay.hidden = !this.isPaused;
+        }
+    }
+
+    private setupPauseControls(): void {
+        document.querySelector<HTMLButtonElement>('[data-testid="resume-button"]')?.addEventListener('click', () => this.setPaused(false));
+        this.setPaused(false);
     }
 
     private readSavedDifficulty(): GameDifficulty {
@@ -743,6 +768,8 @@ export class GameScene extends Phaser.Scene {
             getEnemyCount: () => this.enemies.length,
             getEnemySnapshot: () => this.enemies.map((enemy) => ({ id: enemy.id, x: enemy.x, y: enemy.y, health: enemy.health })),
             getBaseHealth: () => this.baseHealth,
+            getElapsedMs: () => this.elapsedMs,
+            isPaused: () => this.isPaused,
             getDifficulty: () => this.difficulty,
             setDifficulty: (difficulty: GameDifficulty) => this.setDifficulty(difficulty),
             spawnEnemyNearBase: () => this.spawnEnemyNearBase(),
