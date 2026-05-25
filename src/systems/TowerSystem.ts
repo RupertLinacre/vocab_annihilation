@@ -1,6 +1,6 @@
 import type { EnemyState, MapGeometry, ProjectileState, TowerState } from '../types';
 import { getTowerStats } from '../pathfinding/ThreatMap';
-import { selectTowerTarget } from '../entities/Tower';
+import { isWallTower, selectTowerTarget } from '../entities/Tower';
 import { cellCenter, Grid } from '../map/Grid';
 import type { FlowField } from '../pathfinding/FlowField';
 import { createProjectile } from '../entities/Projectile';
@@ -22,6 +22,9 @@ export class TowerSystem {
         const projectiles: ProjectileState[] = [];
         let shotsFired = 0;
         for (const tower of towers) {
+            if (isWallTower(tower)) {
+                continue;
+            }
             tower.cooldownMs -= deltaMs;
             if (tower.cooldownMs > 0) {
                 continue;

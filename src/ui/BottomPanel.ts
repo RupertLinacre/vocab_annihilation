@@ -1,27 +1,25 @@
-import { DIFFICULTY_LABELS, TOWER_LABELS } from '../config/gameConfig';
+import { DIFFICULTY_LABELS, TOWER_BUILD_DIFFICULTIES, TOWER_LABELS } from '../config/gameConfig';
 import { canUpgradeTower, getUpgradeQuestionDifficulty } from '../entities/Tower';
 import { getTowerStats } from '../pathfinding/ThreatMap';
 import { VocabQuestionSystem } from '../systems/VocabQuestionSystem';
-import type { GridPoint, TowerDifficulty, TowerState, Vec2, VocabQuestion } from '../types';
+import type { GridPoint, TowerDifficulty, TowerState, TowerType, Vec2, VocabQuestion } from '../types';
 
-const BUILD_DIFFICULTIES: TowerDifficulty[] = ['easy', 'medium', 'hard', 'veryHard'];
-const TOWER_SELECTOR_OPTIONS: Record<TowerDifficulty, { imagePath: string; label: string }> = {
-    easy: { imagePath: 'sprites/turret_basic.png', label: 'Bullet' },
-    medium: { imagePath: 'sprites/turret_cluster.png', label: 'Spray' },
-    hard: { imagePath: 'sprites/turret_sidewinder.png', label: 'Homing missile' },
-    veryHard: { imagePath: 'sprites/turrent_cluster_bomb.png', label: 'Cluster' },
+const BUILD_TOWER_TYPES: TowerType[] = ['easy', 'spray', 'missile', 'cluster', 'wall'];
+const spritePath = (path: string): string => `${import.meta.env.BASE_URL}${path}`;
+const TOWER_SELECTOR_OPTIONS: Record<TowerType, { imagePath: string; label: string; testId: string }> = {
+    easy: { imagePath: spritePath('sprites/turret_basic.png'), label: 'Bullet', testId: 'select-easy' },
+    spray: { imagePath: spritePath('sprites/turret_cluster.png'), label: 'Spray', testId: 'select-medium' },
+    missile: { imagePath: spritePath('sprites/turret_sidewinder.png'), label: 'Homing missile', testId: 'select-hard' },
+    cluster: { imagePath: spritePath('sprites/turrent_cluster_bomb.png'), label: 'Cluster', testId: 'select-veryHard' },
+    wall: { imagePath: spritePath('sprites/wall.png'), label: 'Wall', testId: 'select-wall' },
 };
 const BUILD_MENU_PADDING = 12;
 const BUILD_MENU_OFFSET = 14;
 
-function resolvePublicAssetPath(assetPath: string): string {
-    return `${import.meta.env.BASE_URL}${assetPath.replace(/^\//, '')}`;
-}
-
-export type BuildDifficultySelection = TowerDifficulty;
+export type BuildTowerSelection = TowerType;
 
 interface BottomPanelCallbacks {
-    onBuild: (cell: GridPoint, difficulty: TowerDifficulty) => void;
+    onBuild: (cell: GridPoint, towerType: TowerType) => void;
     onUpgrade: (tower: TowerState) => void;
     onAnswered: (correct: boolean) => void;
     onQuestionStateChange: (isActive: boolean) => void;
@@ -29,7 +27,7 @@ interface BottomPanelCallbacks {
 }
 
 type PendingAction =
-    | { kind: 'build'; cell: GridPoint; difficulty: TowerDifficulty }
+    | { kind: 'build'; cell: GridPoint; towerType: TowerType; difficulty: TowerDifficulty }
     | { kind: 'upgrade'; tower: TowerState; difficulty: TowerDifficulty };
 
 export class BottomPanel {
@@ -43,7 +41,7 @@ export class BottomPanel {
     private currentQuestion: VocabQuestion | undefined;
     private pendingAction: PendingAction | undefined;
     private questionActive = false;
-    private selectedBuildDifficulty: BuildDifficultySelection = 'easy';
+    private selectedBuildTower: BuildTowerSelection = 'easy';
     private panelExpanded = true;
 
     constructor(private readonly vocab: VocabQuestionSystem, private readonly callbacks: BottomPanelCallbacks) {
@@ -60,7 +58,8 @@ export class BottomPanel {
     openBuild(cell: GridPoint, anchor: Vec2): void {
         this.clearPendingClose();
         this.popupAnchor = anchor;
-        this.showQuestion({ kind: 'build', cell, difficulty: this.resolveBuildDifficulty() });
+        const towerType = this.resolveBuildTower();
+        this.showQuestion({ kind: 'build', cell, towerType, difficulty: TOWER_BUILD_DIFFICULTIES[towerType] });
     }
 
     openUpgrade(tower: TowerState, anchor: Vec2): void {
@@ -68,11 +67,15 @@ export class BottomPanel {
         this.popupAnchor = anchor;
         if (!canUpgradeTower(tower)) {
             const stats = getTowerStats(tower);
+            const detail = tower.type === 'wall'
+                ? `Health ${Math.ceil(tower.health ?? 0)} / ${Math.ceil(tower.maxHealth ?? tower.health ?? 0)}.`
+                : `Range ${Math.round(stats.range)} px. Fire interval ${Math.round(stats.cooldownMs)} ms.`;
+            const message = tower.type === 'wall' ? 'No upgrade path.' : 'Maximum level reached.';
             this.showMessagePopup(
                 TOWER_LABELS[tower.type],
                 `Level ${tower.level} tower`,
-                `Range ${Math.round(stats.range)} px. Fire interval ${Math.round(stats.cooldownMs)} ms.`,
-                'Maximum level reached.',
+                detail,
+                message,
             );
             return;
         }
@@ -91,8 +94,8 @@ export class BottomPanel {
         this.callbacks.onClose();
     }
 
-    setSelectedBuildDifficulty(selection: BuildDifficultySelection): void {
-        this.selectedBuildDifficulty = selection;
+    setSelectedBuildDifficulty(selection: BuildTowerSelection): void {
+        this.selectedBuildTower = selection;
         this.renderDifficultySelector();
     }
 
@@ -117,7 +120,7 @@ export class BottomPanel {
             this.buildMenu.append(this.createParagraph('feedback good', 'Correct'));
             this.buildMenu.style.pointerEvents = 'none';
             if (this.pendingAction.kind === 'build') {
-                this.callbacks.onBuild(this.pendingAction.cell, this.pendingAction.difficulty);
+                this.callbacks.onBuild(this.pendingAction.cell, this.pendingAction.towerType);
             } else {
                 this.callbacks.onUpgrade(this.pendingAction.tower);
             }
@@ -218,8 +221,8 @@ export class BottomPanel {
     private renderDifficultySelector(): void {
         this.body.innerHTML = '';
         const row = this.createDiv('button-row difficulty-selector-row');
-        BUILD_DIFFICULTIES.forEach((selection) => {
-            const isSelected = selection === this.selectedBuildDifficulty;
+        BUILD_TOWER_TYPES.forEach((selection) => {
+            const isSelected = selection === this.selectedBuildTower;
             const button = this.createTowerSelectorButton(selection, isSelected);
             button.setAttribute('aria-pressed', String(isSelected));
             button.addEventListener('click', () => this.setSelectedBuildDifficulty(selection));
@@ -228,8 +231,8 @@ export class BottomPanel {
         this.body.append(row);
     }
 
-    private resolveBuildDifficulty(): TowerDifficulty {
-        return this.selectedBuildDifficulty;
+    private resolveBuildTower(): TowerType {
+        return this.selectedBuildTower;
     }
 
     private setExpanded(expanded: boolean): void {
@@ -288,22 +291,23 @@ export class BottomPanel {
         return button;
     }
 
-    private createTowerSelectorButton(selection: TowerDifficulty, isSelected: boolean): HTMLButtonElement {
+    private createTowerSelectorButton(selection: TowerType, isSelected: boolean): HTMLButtonElement {
+        const option = TOWER_SELECTOR_OPTIONS[selection];
         const button = document.createElement('button');
         button.type = 'button';
         button.className = `difficulty-button difficulty-selector-button tower-selector-button${isSelected ? ' is-selected' : ''}`;
-        button.dataset.testid = `select-${selection}`;
-        button.setAttribute('aria-label', `${DIFFICULTY_LABELS[selection]} tower, ${TOWER_SELECTOR_OPTIONS[selection].label}`);
+        button.dataset.testid = option.testId;
+        button.setAttribute('aria-label', `${DIFFICULTY_LABELS[TOWER_BUILD_DIFFICULTIES[selection]]} tower, ${option.label}`);
 
         const image = document.createElement('img');
         image.className = 'tower-selector-image';
-        image.src = resolvePublicAssetPath(TOWER_SELECTOR_OPTIONS[selection].imagePath);
+        image.src = option.imagePath;
         image.alt = '';
         image.decoding = 'async';
 
         const label = document.createElement('span');
         label.className = 'tower-selector-label';
-        label.textContent = TOWER_SELECTOR_OPTIONS[selection].label;
+        label.textContent = option.label;
 
         const content = document.createElement('span');
         content.className = 'tower-selector-content';

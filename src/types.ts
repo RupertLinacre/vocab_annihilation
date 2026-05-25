@@ -2,7 +2,7 @@ export type TerrainType = 'tree' | 'grass' | 'tarmac';
 
 export type TowerDifficulty = 'easy' | 'medium' | 'hard' | 'veryHard';
 
-export type TowerType = 'easy' | 'spray' | 'missile' | 'cluster';
+export type TowerType = 'easy' | 'spray' | 'missile' | 'cluster' | 'wall';
 
 export type EnemyType = 'scout' | 'grunt' | 'tank';
 
@@ -31,6 +31,9 @@ export interface TowerState {
     type: TowerType;
     level: number;
     cooldownMs: number;
+    health?: number;
+    maxHealth?: number;
+    baseTerrain?: TerrainType;
 }
 
 export interface EnemyState {

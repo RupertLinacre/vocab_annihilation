@@ -1,6 +1,7 @@
 import type { WordEntry } from './gameTypes';
 
-// Vocabulary rebuilt from Tier-2-Word-School-Guide.xlsx.
+// Vocabulary words and difficulty bands rebuilt from Tier-2-Word-School-Guide.xlsx.
+// Definitions are overridden from Simple English Wiktionary when available.
 export const ALL_VOCAB: WordEntry[] = [
     // Reception
 

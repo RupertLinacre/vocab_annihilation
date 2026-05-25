@@ -74,7 +74,7 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     await expect(page.getByTestId('panel-row-title')).toHaveText('Select which tower');
     await expect(page.getByTestId('select-hard')).toContainText('Homing missile');
 
-    for (const [key, testId] of [['1', 'select-easy'], ['2', 'select-medium'], ['3', 'select-hard'], ['4', 'select-veryHard']] as const) {
+    for (const [key, testId] of [['1', 'select-easy'], ['2', 'select-medium'], ['3', 'select-hard'], ['4', 'select-veryHard'], ['5', 'select-wall']] as const) {
         await page.keyboard.press(key);
         await expect(page.getByTestId(testId)).toHaveAttribute('aria-pressed', 'true');
     }

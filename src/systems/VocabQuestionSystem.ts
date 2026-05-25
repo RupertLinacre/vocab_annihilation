@@ -1,4 +1,5 @@
 import type { RawVocabDifficulty, WordEntry } from '../../gameTypes';
+import { SIMPLE_WIKTIONARY_DEFINITIONS } from '../../simpleWiktionaryDefinitions';
 import { ALL_VOCAB } from '../../vocab';
 import { SeededRandom } from '../core/SeededRandom';
 import type { NormalizedVocabEntry, TowerDifficulty, VocabQuestion } from '../types';
@@ -65,7 +66,7 @@ export function normalizeVocab(
 ): NormalizedVocabEntry[] {
     return entries.map((entry) => ({
         word: entry.word,
-        definition: entry.definition,
+        definition: SIMPLE_WIKTIONARY_DEFINITIONS[entry.word.toLowerCase()] ?? entry.definition,
         difficulty: mapRawDifficultyToTowerDifficulty(entry.difficulty, baseDifficulty),
     }));
 }

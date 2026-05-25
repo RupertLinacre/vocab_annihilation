@@ -28,6 +28,9 @@ export const GAME_CONFIG = {
         stuckAfterSeconds: 2.5,
         panicSeconds: 3.25,
     },
+    wall: {
+        health: 10,
+    },
     mapGenerationAttempts: 50,
     uiPanelHeight: 188,
 };
@@ -38,11 +41,20 @@ export const TOWER_DIFFICULTY_TO_TYPE: Record<TowerDifficulty, TowerType> = {
     veryHard: 'cluster',
 };
 
+export const TOWER_BUILD_DIFFICULTIES: Record<TowerType, TowerDifficulty> = {
+    easy: 'easy',
+    spray: 'medium',
+    missile: 'hard',
+    cluster: 'veryHard',
+    wall: 'veryHard',
+};
+
 export const TOWER_UPGRADE_DIFFICULTIES: Record<TowerType, TowerDifficulty[]> = {
     easy: ['easy', 'easy', 'medium', 'medium', 'hard', 'hard', 'veryHard'],
     spray: ['medium', 'medium', 'hard', 'hard', 'hard', 'veryHard', 'veryHard'],
     missile: ['hard', 'hard', 'hard', 'veryHard', 'veryHard', 'veryHard', 'veryHard'],
     cluster: ['veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard'],
+    wall: [],
 };
 
 export const TOWER_LABELS: Record<TowerType, string> = {
@@ -50,6 +62,7 @@ export const TOWER_LABELS: Record<TowerType, string> = {
     spray: 'Medium Spray Tower',
     missile: 'Hard Missile Tower',
     cluster: 'Very Hard Cluster Tower',
+    wall: 'Very Hard Wall',
 };
 
 export const DIFFICULTY_LABELS: Record<TowerDifficulty, string> = {
@@ -116,6 +129,9 @@ export const TOWER_STATS: Record<TowerType, TowerLevelStats[]> = {
         { range: 336, cooldownMs: 1040, damage: 59, bulletSpeed: 376, explosionRadius: 126, fragmentCount: 14, fragmentDamage: 16, threat: 17.4 },
         { range: 370, cooldownMs: 1100, damage: 69, bulletSpeed: 402, explosionRadius: 142, fragmentCount: 16, fragmentDamage: 18, threat: 20.2 },
     ],
+    wall: [
+        { range: 0, cooldownMs: 0, damage: 0, threat: 0 },
+    ],
 };
 
 export interface EnemyStats {
@@ -142,4 +158,5 @@ export const TOWER_COLORS: Record<TowerType, number> = {
     spray: 0xff9f1c,
     missile: 0xbde0fe,
     cluster: 0xf15bb5,
+    wall: 0xe53935,
 };
