@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GAME_CONFIG } from '../../src/config/gameConfig';
 import { createEnemy } from '../../src/entities/Enemy';
-import { calculateTotalTowerDamagePerSecond, calculateTowerDamagePerSecond, selectTowerTarget } from '../../src/entities/Tower';
+import { calculateTotalTowerDamagePerSecond, calculateTowerDamagePerSecond, canUpgradeTower, createTower, selectTowerTarget } from '../../src/entities/Tower';
 import { cellCenter, Grid } from '../../src/map/Grid';
 import { buildFlowField } from '../../src/pathfinding/FlowField';
 import { createEmptyCostGrid } from '../../src/pathfinding/ThreatMap';
@@ -38,5 +38,15 @@ describe('tower target selection', () => {
         expect(calculateTowerDamagePerSecond(spray)).toBeCloseTo(24 / 1);
         expect(calculateTowerDamagePerSecond(cluster)).toBeCloseTo(49 / 1.6);
         expect(calculateTotalTowerDamagePerSecond([easy, spray, cluster])).toBeCloseTo(13 / 0.66 + 24 + 49 / 1.6);
+    });
+
+    it('creates non-upgradable walls with no combat DPS', () => {
+        const wall = createTower(1, 1, 1, 'wall');
+
+        expect(wall.health).toBe(GAME_CONFIG.wall.health);
+        expect(wall.maxHealth).toBe(GAME_CONFIG.wall.health);
+        expect(canUpgradeTower(wall)).toBe(false);
+        expect(calculateTowerDamagePerSecond(wall)).toBe(0);
+        expect(calculateTotalTowerDamagePerSecond([wall])).toBe(0);
     });
 });

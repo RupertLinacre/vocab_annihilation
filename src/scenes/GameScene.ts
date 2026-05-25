@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { ALL_VOCAB } from '../../vocab';
 import { ENEMY_STATS, GAME_CONFIG, TOWER_COLORS } from '../config/gameConfig';
 import { SeededRandom } from '../core/SeededRandom';
-import { createTower, towerTypeForDifficulty, upgradeTower } from '../entities/Tower';
+import { createTower, isWallTower, upgradeTower } from '../entities/Tower';
 import { updateEnemy } from '../entities/Enemy';
 import { isBaseFootprintCell } from '../map/BaseFootprint';
 import { cellCenter, Grid, worldToGrid } from '../map/Grid';
@@ -13,6 +13,7 @@ import { calculateTowerThreatCosts, createEmptyCostGrid, type CostGrid, getTower
 import { EnemySpawner, isGameDifficulty, type GameDifficulty } from '../systems/EnemySpawner';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
 import { TowerSystem } from '../systems/TowerSystem';
+import { attackNearestWallIfPathBlocked } from '../systems/WallSystem';
 import {
     BASE_VOCAB_DIFFICULTIES,
     normalizeVocab,
@@ -20,8 +21,8 @@ import {
     type BaseVocabDifficulty,
     VocabQuestionSystem,
 } from '../systems/VocabQuestionSystem';
-import { BottomPanel, type BuildDifficultySelection } from '../ui/BottomPanel';
-import type { EnemyState, GridPoint, ProjectileState, TerrainType, TowerDifficulty, TowerState, TowerType, Vec2 } from '../types';
+import { BottomPanel, type BuildTowerSelection } from '../ui/BottomPanel';
+import type { EnemyState, GridPoint, ProjectileState, TerrainType, TowerState, TowerType, Vec2 } from '../types';
 
 const SPRITE_PATHS = {
     base: 'sprites/base_1.png',
@@ -39,6 +40,7 @@ const SPRITE_PATHS = {
     towerCluster: 'sprites/turret_cluster.png',
     towerClusterBomb: 'sprites/turrent_cluster_bomb.png',
     towerSidewinder: 'sprites/turret_sidewinder.png',
+    wallPlaceholder: 'sprites/wall_placeholder.svg',
     monster1Run: 'sprites/monster_1_run.png',
     monster1Stop: 'sprites/monster_1_stop.png',
     monster1Hurt: 'sprites/monster_1_hurt.png',
@@ -76,6 +78,7 @@ const TOWER_TEXTURES: Record<TowerType, string> = {
     spray: SPRITE_PATHS.towerCluster,
     missile: SPRITE_PATHS.towerSidewinder,
     cluster: SPRITE_PATHS.towerClusterBomb,
+    wall: SPRITE_PATHS.wallPlaceholder,
 };
 
 const ENEMY_TEXTURES = {
@@ -85,11 +88,12 @@ const ENEMY_TEXTURES = {
     4: { run: SPRITE_PATHS.monster4Run, stop: SPRITE_PATHS.monster4Stop, hurt: SPRITE_PATHS.monster4Hurt },
 } as const;
 
-const BUILD_SHORTCUTS: Record<string, BuildDifficultySelection> = {
+const BUILD_SHORTCUTS: Record<string, BuildTowerSelection> = {
     '1': 'easy',
-    '2': 'medium',
-    '3': 'hard',
-    '4': 'veryHard',
+    '2': 'spray',
+    '3': 'missile',
+    '4': 'cluster',
+    '5': 'wall',
 };
 
 const TOWER_SPRITE_MAX_SIZE = GAME_CONFIG.map.cellSize * 1.2;
@@ -229,7 +233,19 @@ export class GameScene extends Phaser.Scene {
 
         const enemySurvivors: EnemyState[] = [];
         let baseDamageTaken = 0;
+        let wallDestroyed = false;
         for (const enemy of this.enemies) {
+            const wallAttack = attackNearestWallIfPathBlocked(enemy, deltaMs / 1000, this.towers, this.flowField, this.generatedMap.grid, GAME_CONFIG.map);
+            if (wallAttack.attacked) {
+                if (wallAttack.destroyedWall) {
+                    this.removeWall(wallAttack.destroyedWall);
+                    wallDestroyed = true;
+                }
+                if (enemy.health > 0) {
+                    enemySurvivors.push(enemy);
+                }
+                continue;
+            }
             const reachedBase = updateEnemy(enemy, deltaMs / 1000, this.flowField, this.emergencyFlowField, this.generatedMap.grid, GAME_CONFIG.map, this.enemies);
             if (reachedBase) {
                 const previousHealth = this.baseHealth;
@@ -240,6 +256,9 @@ export class GameScene extends Phaser.Scene {
             }
         }
         this.enemies = enemySurvivors;
+        if (wallDestroyed) {
+            this.rebuildFlowField();
+        }
         if (baseDamageTaken > 0) {
             this.flashBaseDamage();
         }
@@ -290,11 +309,16 @@ export class GameScene extends Phaser.Scene {
         this.render();
     }
 
-    private buildTower(cell: GridPoint, difficulty: TowerDifficulty): void {
+    private buildTower(cell: GridPoint, towerType: TowerType): void {
         if (!this.canBuildOnCell(cell) || this.findTowerAt(cell.x, cell.y)) {
             return;
         }
-        this.towers.push(createTower(this.nextTowerId++, cell.x, cell.y, towerTypeForDifficulty(difficulty)));
+        const tower = createTower(this.nextTowerId++, cell.x, cell.y, towerType);
+        if (isWallTower(tower)) {
+            tower.baseTerrain = this.generatedMap.grid.getTerrain(cell.x, cell.y);
+            this.generatedMap.grid.setTerrain(cell.x, cell.y, 'tree');
+        }
+        this.towers.push(tower);
         this.spawningUnlocked = true;
         this.rebuildFlowField();
         this.syncStatusMessage();
@@ -308,6 +332,18 @@ export class GameScene extends Phaser.Scene {
     private upgradeExistingTower(tower: TowerState): void {
         if (upgradeTower(tower)) {
             this.rebuildFlowField();
+        }
+    }
+
+    private removeWall(wall: TowerState): void {
+        const index = this.towers.findIndex((tower) => tower.id === wall.id);
+        if (index === -1) {
+            return;
+        }
+        this.towers.splice(index, 1);
+        this.generatedMap.grid.setTerrain(wall.gridX, wall.gridY, wall.baseTerrain ?? 'grass');
+        if (this.selectedTower?.id === wall.id) {
+            this.panel.close();
         }
     }
 
@@ -613,6 +649,9 @@ export class GameScene extends Phaser.Scene {
     private renderTowerRanges(): void {
         const towersToShow = this.debug.ranges ? this.towers : this.selectedTower ? [this.selectedTower] : [];
         for (const tower of towersToShow) {
+            if (isWallTower(tower)) {
+                continue;
+            }
             const center = cellCenter({ x: tower.gridX, y: tower.gridY }, GAME_CONFIG.map);
             const stats = getTowerStats(tower);
             this.graphics.lineStyle(2, TOWER_COLORS[tower.type], tower === this.selectedTower ? 0.54 : 0.24);
@@ -636,6 +675,11 @@ export class GameScene extends Phaser.Scene {
             this.setSpriteMaxSize(sprite, TOWER_SPRITE_MAX_SIZE);
             sprite.setAlpha(tower === this.selectedTower ? 1 : 0.96);
 
+            if (isWallTower(tower)) {
+                this.renderWallHealth(tower, center);
+                continue;
+            }
+
             this.graphics.fillStyle(0x101614, 0.9);
             for (let level = 0; level < tower.level; level += 1) {
                 this.graphics.fillCircle(center.x - 10 + level * 5, center.y + 18, 2);
@@ -648,6 +692,16 @@ export class GameScene extends Phaser.Scene {
                 this.towerSprites.delete(towerId);
             }
         }
+    }
+
+    private renderWallHealth(tower: TowerState, center: Vec2): void {
+        const maxHealth = tower.maxHealth ?? GAME_CONFIG.wall.health;
+        const healthPercent = Math.max(0, Math.min(1, (tower.health ?? maxHealth) / maxHealth));
+        const barWidth = GAME_CONFIG.map.cellSize * 0.64;
+        this.graphics.fillStyle(0x101614, 0.9);
+        this.graphics.fillRect(center.x - barWidth / 2, center.y + 16, barWidth, 4);
+        this.graphics.fillStyle(healthPercent > 0.4 ? 0xf7f0d6 : 0xff9f1c, 1);
+        this.graphics.fillRect(center.x - barWidth / 2, center.y + 16, barWidth * healthPercent, 4);
     }
 
     private renderEnemies(): void {
@@ -758,6 +812,9 @@ export class GameScene extends Phaser.Scene {
         }
         const tower = this.selectedTower;
         const stats = getTowerStats(tower);
+        if (stats.range <= 0) {
+            return;
+        }
         const towerCenter = cellCenter({ x: tower.gridX, y: tower.gridY }, GAME_CONFIG.map);
         const cellRadius = Math.ceil(stats.range / GAME_CONFIG.map.cellSize);
         const { originX, originY, cellSize } = GAME_CONFIG.map;

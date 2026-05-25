@@ -17,6 +17,9 @@ export function calculateTowerThreatCosts(grid: Grid, towers: readonly TowerStat
     const threat = createEmptyCostGrid(grid, 0);
     for (const tower of towers) {
         const stats = getTowerStats(tower);
+        if (stats.range <= 0 || stats.threat <= 0) {
+            continue;
+        }
         const towerCenter = cellCenter({ x: tower.gridX, y: tower.gridY }, geometry);
         const cellRadius = Math.ceil(stats.range / geometry.cellSize);
         for (let y = tower.gridY - cellRadius; y <= tower.gridY + cellRadius; y += 1) {

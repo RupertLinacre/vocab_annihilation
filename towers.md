@@ -8,15 +8,17 @@ This document describes the intended tower types and upgrade path. The numbers b
 - Answer a `medium` vocab question to build a `Medium Spray Tower`.
 - Answer a `hard` vocab question to build a `Hard Missile Tower`.
 - Answer a `veryHard` vocab question to build a `Very Hard Cluster Tower`.
+- Answer a `veryHard` vocab question to build a `Very Hard Wall`.
 
 ## Upgrade path
 
-All towers start at level 1 and are planned to upgrade through level 8.
+Combat towers start at level 1 and are planned to upgrade through level 8. Walls have no upgrade path.
 
 - Easy Bullet Tower upgrade difficulty trajectory: `easy -> easy -> medium -> medium -> hard -> hard -> veryHard`
 - Medium Spray Tower upgrade difficulty trajectory: `medium -> medium -> hard -> hard -> hard -> veryHard -> veryHard`
 - Hard Missile Tower upgrade difficulty trajectory: `hard -> hard -> hard -> veryHard -> veryHard -> veryHard -> veryHard`
 - Very Hard Cluster Tower upgrade difficulty trajectory: `veryHard -> veryHard -> veryHard -> veryHard -> veryHard -> veryHard -> veryHard`
+- Very Hard Wall upgrade difficulty trajectory: none
 
 ## Notes on interpreting the numbers
 
@@ -33,6 +35,17 @@ All towers start at level 1 and are planned to upgrade through level 8.
 - Cluster towers fire one shell. On impact, the shell deals explosion damage in an area and then spawns fragments. `Total damage if all connect` for cluster towers is `max explosion damage + all fragment damage`, which is a theoretical maximum.
 - Cluster explosion damage falls off by up to 45% at the edge of the explosion radius.
 - Cluster fragments always travel at `260` speed, regardless of tower level.
+- Walls are impassable to monsters and projectiles, matching tree blocking behavior.
+- Walls have `10` health. Enemies that no longer have any path to the base attack walls instead of attacking the base.
+
+## Very Hard Wall
+
+Blocking tower. It does not fire and cannot be upgraded.
+
+- Level 1
+	- Step: Build with `veryHard` question
+	- Health: `10`
+	- Upgrade path: none
 
 ## Easy Bullet Tower
 
