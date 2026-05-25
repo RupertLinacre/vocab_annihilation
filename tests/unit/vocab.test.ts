@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SeededRandom } from '../../src/core/SeededRandom';
 import { canUpgradeTower, createTower, getUpgradeQuestionDifficulty, upgradeTower } from '../../src/entities/Tower';
-import { VocabQuestionSystem } from '../../src/systems/VocabQuestionSystem';
+import { mapRawDifficultyToTowerDifficulty, mapTowerDifficultyToRawDifficulty, normalizeVocab, VocabQuestionSystem } from '../../src/systems/VocabQuestionSystem';
 import type { NormalizedVocabEntry } from '../../src/types';
 
 const entries: NormalizedVocabEntry[] = [
@@ -57,5 +57,32 @@ describe('vocabulary questions and upgrades', () => {
         const first = system.createQuestion('easy');
         const second = system.createQuestion('easy');
         expect(second.correctWord).not.toBe(first.correctWord);
+    });
+
+    it('can shift tower vocab bands from the selected base difficulty', () => {
+        expect(mapTowerDifficultyToRawDifficulty('easy', 'reception')).toBe('reception');
+        expect(mapTowerDifficultyToRawDifficulty('medium', 'reception')).toBe('year1');
+        expect(mapTowerDifficultyToRawDifficulty('hard', 'reception')).toBe('year2');
+        expect(mapTowerDifficultyToRawDifficulty('veryHard', 'reception')).toBe('year3');
+
+        expect(mapTowerDifficultyToRawDifficulty('easy', 'year1')).toBe('year1');
+        expect(mapTowerDifficultyToRawDifficulty('medium', 'year1')).toBe('year2');
+        expect(mapTowerDifficultyToRawDifficulty('hard', 'year1')).toBe('year3');
+        expect(mapTowerDifficultyToRawDifficulty('veryHard', 'year1')).toBe('year4');
+    });
+
+    it('normalizes raw vocab against the chosen base difficulty', () => {
+        const normalized = normalizeVocab([
+            { word: 'alpha', definition: 'first', difficulty: 'year1', synonyms: [], antonyms: [] },
+            { word: 'beta', definition: 'second', difficulty: 'year2', synonyms: [], antonyms: [] },
+            { word: 'gamma', definition: 'third', difficulty: 'year4', synonyms: [], antonyms: [] },
+            { word: 'delta', definition: 'fourth', difficulty: 'year6PlusPlus', synonyms: [], antonyms: [] },
+        ], 'year1');
+
+        expect(normalized.map((entry) => entry.difficulty)).toEqual(['easy', 'medium', 'veryHard', 'veryHard']);
+        expect(mapRawDifficultyToTowerDifficulty('reception', 'year1')).toBe('easy');
+        expect(mapRawDifficultyToTowerDifficulty('year2', 'year1')).toBe('medium');
+        expect(mapRawDifficultyToTowerDifficulty('year3', 'year1')).toBe('hard');
+        expect(mapRawDifficultyToTowerDifficulty('year4', 'year1')).toBe('veryHard');
     });
 });

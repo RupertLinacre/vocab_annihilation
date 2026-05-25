@@ -1,8 +1,8 @@
-import { DIFFICULTY_LABELS, TOWER_LABELS } from '../config/gameConfig';
+import { TOWER_LABELS } from '../config/gameConfig';
 import { SeededRandom } from '../core/SeededRandom';
 import { canUpgradeTower, getUpgradeQuestionDifficulty } from '../entities/Tower';
 import { getTowerStats } from '../pathfinding/ThreatMap';
-import { VocabQuestionSystem } from '../systems/VocabQuestionSystem';
+import { mapTowerDifficultyToRawDifficulty, RAW_VOCAB_DIFFICULTY_LABELS, type BaseVocabDifficulty, VocabQuestionSystem } from '../systems/VocabQuestionSystem';
 import type { GridPoint, TowerDifficulty, TowerState, Vec2, VocabQuestion } from '../types';
 
 const BUILD_DIFFICULTIES: TowerDifficulty[] = ['easy', 'medium', 'hard', 'veryHard'];
@@ -35,6 +35,7 @@ export class BottomPanel {
     private currentQuestion: VocabQuestion | undefined;
     private pendingAction: PendingAction | undefined;
     private questionActive = false;
+    private baseDifficulty: BaseVocabDifficulty = 'reception';
     private selectedBuildDifficulty: BuildDifficultySelection = 'easy';
     private panelExpanded = true;
 
@@ -85,6 +86,11 @@ export class BottomPanel {
 
     setSelectedBuildDifficulty(selection: BuildDifficultySelection): void {
         this.selectedBuildDifficulty = selection;
+        this.renderDifficultySelector();
+    }
+
+    setBaseDifficulty(baseDifficulty: BaseVocabDifficulty): void {
+        this.baseDifficulty = baseDifficulty;
         this.renderDifficultySelector();
     }
 
@@ -147,7 +153,7 @@ export class BottomPanel {
 
         const header = this.createDiv('build-popup-header');
         const heading = this.createDiv('build-popup-head');
-        heading.append(this.createParagraph('panel-kicker build-popup-kicker', DIFFICULTY_LABELS[this.currentQuestion.difficulty]));
+        heading.append(this.createParagraph('panel-kicker build-popup-kicker', this.describeQuestionDifficulty(this.currentQuestion.difficulty)));
 
         const closeButton = this.createButton('icon-button build-popup-close', '×', 'answer-popup-close');
         closeButton.setAttribute('aria-label', 'Close answers');
@@ -212,7 +218,7 @@ export class BottomPanel {
         const row = this.createDiv('button-row difficulty-selector-row');
         BUILD_SELECTIONS.forEach((selection) => {
             const isSelected = selection === this.selectedBuildDifficulty;
-            const label = selection === 'random' ? 'Random' : DIFFICULTY_LABELS[selection];
+            const label = selection === 'random' ? 'Random' : this.describeQuestionDifficulty(selection);
             const button = this.createButton(
                 `difficulty-button difficulty-selector-button${isSelected ? ' is-selected' : ''}`,
                 label,
@@ -223,6 +229,11 @@ export class BottomPanel {
             row.append(button);
         });
         this.body.append(row);
+    }
+
+    private describeQuestionDifficulty(difficulty: TowerDifficulty): string {
+        const rawDifficulty = mapTowerDifficultyToRawDifficulty(difficulty, this.baseDifficulty);
+        return RAW_VOCAB_DIFFICULTY_LABELS[rawDifficulty];
     }
 
     private resolveBuildDifficulty(): TowerDifficulty {

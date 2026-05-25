@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ALL_VOCAB } from '../../vocab';
 import { ENEMY_STATS, GAME_CONFIG, TOWER_COLORS } from '../config/gameConfig';
 import { SeededRandom } from '../core/SeededRandom';
 import { createTower, towerTypeForDifficulty, upgradeTower } from '../entities/Tower';
@@ -12,7 +13,13 @@ import { calculateTowerThreatCosts, createEmptyCostGrid, type CostGrid, getTower
 import { EnemySpawner, isGameDifficulty, type GameDifficulty } from '../systems/EnemySpawner';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
 import { TowerSystem } from '../systems/TowerSystem';
-import { VocabQuestionSystem } from '../systems/VocabQuestionSystem';
+import {
+    BASE_VOCAB_DIFFICULTIES,
+    normalizeVocab,
+    RAW_VOCAB_DIFFICULTY_LABELS,
+    type BaseVocabDifficulty,
+    VocabQuestionSystem,
+} from '../systems/VocabQuestionSystem';
 import { BottomPanel, type BuildDifficultySelection } from '../ui/BottomPanel';
 import type { EnemyState, GridPoint, ProjectileState, TerrainType, TowerDifficulty, TowerState, TowerType, Vec2 } from '../types';
 
@@ -89,15 +96,21 @@ const BUILD_SHORTCUTS: Record<string, BuildDifficultySelection> = {
 const TOWER_SPRITE_MAX_SIZE = GAME_CONFIG.map.cellSize * 1.2;
 const ENEMY_SPRITE_MIN_SIZE = GAME_CONFIG.map.cellSize * 0.9;
 const ENEMY_SPRITE_MAX_SIZE = GAME_CONFIG.map.cellSize * 1.28;
-const DIFFICULTY_STORAGE_KEY = 'vocab-annihilation:difficulty';
+const LEGACY_DIFFICULTY_STORAGE_KEY = 'vocab-annihilation:difficulty';
+const SPAWN_RATE_STORAGE_KEY = 'vocab-annihilation:spawn-rate';
+const BASE_DIFFICULTY_STORAGE_KEY = 'vocab-annihilation:base-difficulty';
 
-const DIFFICULTY_LABELS: Record<GameDifficulty, string> = {
-    veryEasy: 'Very easy',
-    easy: 'Easy',
+const SPAWN_RATE_LABELS: Record<GameDifficulty, string> = {
+    veryEasy: 'Very low',
+    easy: 'Low',
     medium: 'Medium',
-    hard: 'Hard',
-    veryHard: 'Very hard',
+    hard: 'High',
+    veryHard: 'Very high',
 };
+
+function isBaseVocabDifficulty(value: string): value is BaseVocabDifficulty {
+    return BASE_VOCAB_DIFFICULTIES.includes(value as BaseVocabDifficulty);
+}
 
 type EnemyTextureTier = keyof typeof ENEMY_TEXTURES;
 type EnemyTextureState = keyof (typeof ENEMY_TEXTURES)[EnemyTextureTier];
@@ -128,6 +141,7 @@ export class GameScene extends Phaser.Scene {
     private enemySprites = new Map<number, Phaser.GameObjects.Image>();
     private costTexts: Phaser.GameObjects.Text[] = [];
     private panel!: BottomPanel;
+    private vocabSystem!: VocabQuestionSystem;
     private spawner!: EnemySpawner;
     private towerSystem = new TowerSystem();
     private projectileSystem = new ProjectileSystem();
@@ -138,7 +152,8 @@ export class GameScene extends Phaser.Scene {
     private explosions: ExplosionVisual[] = [];
     private baseHealth = GAME_CONFIG.baseHealth;
     private baseDamageFlashMs = 0;
-    private difficulty: GameDifficulty = 'medium';
+    private spawnRate: GameDifficulty = 'medium';
+    private baseDifficulty: BaseVocabDifficulty = 'reception';
     private elapsedMs = 0;
     private kills = 0;
     private answered = 0;
@@ -169,20 +184,23 @@ export class GameScene extends Phaser.Scene {
     create(): void {
         const seedParam = new URLSearchParams(window.location.search).get('seed');
         const seed = seedParam ? SeededRandom.hash(seedParam) : Date.now() % 1000000000;
-        this.difficulty = this.readSavedDifficulty();
+        this.spawnRate = this.readSavedSpawnRate();
+        this.baseDifficulty = this.readSavedBaseDifficulty();
         this.generatedMap = generateMap(seed);
         this.rebuildFlowField();
         this.graphics = this.add.graphics().setDepth(3);
         this.debugGraphics = this.add.graphics().setDepth(5);
         this.createMapSprites();
         this.spawner = new EnemySpawner(this.generatedMap.spawns, GAME_CONFIG.map, new SeededRandom(`${seed}:spawns`));
-        this.panel = new BottomPanel(new VocabQuestionSystem(new SeededRandom(`${seed}:vocab`)), new SeededRandom(`${seed}:panel`), {
+        this.vocabSystem = new VocabQuestionSystem(new SeededRandom(`${seed}:vocab`), normalizeVocab(ALL_VOCAB, this.baseDifficulty));
+        this.panel = new BottomPanel(this.vocabSystem, new SeededRandom(`${seed}:panel`), {
             onBuild: (cell, difficulty) => this.buildTower(cell, difficulty),
             onUpgrade: (tower) => this.upgradeExistingTower(tower),
             onAnswered: (correct) => this.recordAnswer(correct),
             onQuestionStateChange: (isActive) => this.setQuestionPause(isActive),
             onClose: () => this.clearSelection(),
         });
+        this.panel.setBaseDifficulty(this.baseDifficulty);
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.handlePointerDown(pointer));
         this.registerDebugKeys();
         this.setupSettingsControls();
@@ -201,7 +219,7 @@ export class GameScene extends Phaser.Scene {
         this.baseDamageFlashMs = Math.max(0, this.baseDamageFlashMs - deltaMs);
         if (this.spawningUnlocked) {
             this.enemies.push(...this.spawner.update(deltaMs, this.towers, {
-                difficulty: this.difficulty,
+                difficulty: this.spawnRate,
                 baseHealthPercent: this.baseHealth / GAME_CONFIG.baseHealth,
                 activeEnemyCount: this.enemies.length,
             }));
@@ -355,7 +373,8 @@ export class GameScene extends Phaser.Scene {
     private setupSettingsControls(): void {
         const button = document.querySelector<HTMLButtonElement>('[data-testid="settings-button"]')!;
         const popup = document.querySelector<HTMLElement>('[data-testid="settings-popup"]')!;
-        const options = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-difficulty-option]'));
+        const spawnRateSelect = document.querySelector<HTMLSelectElement>('[data-testid="spawn-rate-select"]')!;
+        const baseDifficultySelect = document.querySelector<HTMLSelectElement>('[data-testid="base-difficulty-select"]')!;
         const closePopup = () => {
             popup.hidden = true;
             button.setAttribute('aria-expanded', 'false');
@@ -366,16 +385,18 @@ export class GameScene extends Phaser.Scene {
             popup.hidden = !shouldOpen;
             button.setAttribute('aria-expanded', `${shouldOpen}`);
         });
-        for (const option of options) {
-            option.addEventListener('click', () => {
-                const value = option.dataset.difficultyOption;
-                if (!value || !isGameDifficulty(value)) {
-                    return;
-                }
-                this.setDifficulty(value);
-                closePopup();
-            });
-        }
+        spawnRateSelect.addEventListener('change', () => {
+            const value = spawnRateSelect.value;
+            if (isGameDifficulty(value)) {
+                this.setSpawnRate(value);
+            }
+        });
+        baseDifficultySelect.addEventListener('change', () => {
+            const value = baseDifficultySelect.value;
+            if (isBaseVocabDifficulty(value)) {
+                this.setBaseDifficulty(value);
+            }
+        });
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
                 closePopup();
@@ -419,25 +440,47 @@ export class GameScene extends Phaser.Scene {
         this.syncPauseState();
     }
 
-    private readSavedDifficulty(): GameDifficulty {
-        const savedDifficulty = window.localStorage.getItem(DIFFICULTY_STORAGE_KEY);
-        return savedDifficulty && isGameDifficulty(savedDifficulty) ? savedDifficulty : 'medium';
+    private readSavedSpawnRate(): GameDifficulty {
+        const savedSpawnRate = window.localStorage.getItem(SPAWN_RATE_STORAGE_KEY)
+            ?? window.localStorage.getItem(LEGACY_DIFFICULTY_STORAGE_KEY);
+        return savedSpawnRate && isGameDifficulty(savedSpawnRate) ? savedSpawnRate : 'medium';
     }
 
-    private setDifficulty(difficulty: GameDifficulty): void {
-        this.difficulty = difficulty;
-        window.localStorage.setItem(DIFFICULTY_STORAGE_KEY, difficulty);
+    private readSavedBaseDifficulty(): BaseVocabDifficulty {
+        const savedBaseDifficulty = window.localStorage.getItem(BASE_DIFFICULTY_STORAGE_KEY);
+        return savedBaseDifficulty && isBaseVocabDifficulty(savedBaseDifficulty) ? savedBaseDifficulty : 'reception';
+    }
+
+    private setSpawnRate(spawnRate: GameDifficulty): void {
+        this.spawnRate = spawnRate;
+        window.localStorage.setItem(SPAWN_RATE_STORAGE_KEY, spawnRate);
+        this.syncSettingsControls();
+    }
+
+    private setBaseDifficulty(baseDifficulty: BaseVocabDifficulty): void {
+        this.baseDifficulty = baseDifficulty;
+        window.localStorage.setItem(BASE_DIFFICULTY_STORAGE_KEY, baseDifficulty);
+        this.vocabSystem.setEntries(normalizeVocab(ALL_VOCAB, baseDifficulty));
+        this.panel.setBaseDifficulty(baseDifficulty);
+        this.panel.close();
         this.syncSettingsControls();
     }
 
     private syncSettingsControls(): void {
-        for (const option of document.querySelectorAll<HTMLButtonElement>('[data-difficulty-option]')) {
-            const isSelected = option.dataset.difficultyOption === this.difficulty;
-            option.setAttribute('aria-pressed', `${isSelected}`);
+        const spawnRateSelect = document.querySelector<HTMLSelectElement>('[data-testid="spawn-rate-select"]');
+        if (spawnRateSelect) {
+            spawnRateSelect.value = this.spawnRate;
+        }
+        const baseDifficultySelect = document.querySelector<HTMLSelectElement>('[data-testid="base-difficulty-select"]');
+        if (baseDifficultySelect) {
+            baseDifficultySelect.value = this.baseDifficulty;
         }
         const popup = document.querySelector<HTMLElement>('[data-testid="settings-popup"]');
         if (popup) {
-            popup.setAttribute('aria-label', `Settings, difficulty ${DIFFICULTY_LABELS[this.difficulty]}`);
+            popup.setAttribute(
+                'aria-label',
+                `Settings, spawn rate ${SPAWN_RATE_LABELS[this.spawnRate]}, base difficulty ${RAW_VOCAB_DIFFICULTY_LABELS[this.baseDifficulty]}`,
+            );
         }
     }
 
@@ -789,8 +832,12 @@ export class GameScene extends Phaser.Scene {
             getBaseHealth: () => this.baseHealth,
             getElapsedMs: () => this.elapsedMs,
             isPaused: () => this.isPaused,
-            getDifficulty: () => this.difficulty,
-            setDifficulty: (difficulty: GameDifficulty) => this.setDifficulty(difficulty),
+            getSpawnRate: () => this.spawnRate,
+            setSpawnRate: (spawnRate: GameDifficulty) => this.setSpawnRate(spawnRate),
+            getBaseDifficulty: () => this.baseDifficulty,
+            setBaseDifficulty: (baseDifficulty: BaseVocabDifficulty) => this.setBaseDifficulty(baseDifficulty),
+            getDifficulty: () => this.spawnRate,
+            setDifficulty: (difficulty: GameDifficulty) => this.setSpawnRate(difficulty),
             spawnEnemyNearBase: () => this.spawnEnemyNearBase(),
         };
         (window as unknown as { vocabAnnihilation: typeof hooks }).vocabAnnihilation = hooks;

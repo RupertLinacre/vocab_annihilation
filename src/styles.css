@@ -125,7 +125,7 @@ body {
   z-index: 9;
   top: 52px;
   right: 12px;
-  width: 190px;
+  width: 236px;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -139,31 +139,40 @@ body {
 }
 
 .settings-popup h2 {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   color: var(--amber);
   font-size: 13px;
   letter-spacing: 0;
 }
 
-.settings-options {
+.settings-field {
   display: grid;
   gap: 6px;
 }
 
-.settings-option {
-  min-height: 34px;
+.settings-field + .settings-field {
+  margin-top: 12px;
+}
+
+.settings-field span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.settings-select {
+  min-height: 38px;
   border: 1px solid rgba(247, 240, 214, 0.18);
   border-radius: 6px;
   color: var(--ink);
   background: var(--panel-strong);
   font: inherit;
+  padding: 0 12px;
   cursor: pointer;
 }
 
-.settings-option[aria-pressed="true"] {
-  border-color: rgba(243, 182, 75, 0.72);
-  background: rgba(243, 182, 75, 0.18);
-  color: #fff8df;
+.settings-select:focus {
+  outline: 2px solid rgba(243, 182, 75, 0.48);
+  outline-offset: 1px;
 }
 
 @keyframes hud-base-hit {
@@ -368,7 +377,7 @@ body {
 .primary-button:hover,
 .choice-button:hover,
 .icon-button:hover,
-.settings-option:hover {
+.settings-select:hover {
   border-color: rgba(247, 240, 214, 0.48);
   background: #2b3931;
 }

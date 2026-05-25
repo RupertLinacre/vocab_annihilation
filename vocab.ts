@@ -3,13 +3,7 @@ import type { WordEntry } from './gameTypes';
 // Vocabulary rebuilt from Tier-2-Word-School-Guide.xlsx.
 export const ALL_VOCAB: WordEntry[] = [
     // Reception
-    {
-        word: 'any',
-        difficulty: 'reception',
-        definition: 'One or more, no matter which one.',
-        synonyms: ['some', 'whichever'],
-        antonyms: ['none'],
-    },
+
     {
         word: 'after',
         difficulty: 'reception',
@@ -41,23 +35,16 @@ export const ALL_VOCAB: WordEntry[] = [
     {
         word: 'new',
         difficulty: 'reception',
-        definition: 'Made or seen not long ago.',
+        definition: 'Made recently.',
         synonyms: [],
         antonyms: ['old'],
     },
     {
         word: 'back',
         difficulty: 'reception',
-        definition: 'The part behind the front.',
+        definition: 'The part on the other side to the front.',
         synonyms: ['hind', 'hinder'],
         antonyms: [],
-    },
-    {
-        word: 'me',
-        difficulty: 'reception',
-        definition: 'The person who is speaking.',
-        synonyms: ['myself'],
-        antonyms: ['you'],
     },
     {
         word: 'great',
@@ -66,13 +53,7 @@ export const ALL_VOCAB: WordEntry[] = [
         synonyms: ['bang-up', 'bully', 'corking'],
         antonyms: [],
     },
-    {
-        word: 'mean',
-        difficulty: 'reception',
-        definition: 'To want or say something.',
-        synonyms: ['intend'],
-        antonyms: [],
-    },
+
     {
         word: 'work',
         difficulty: 'reception',
@@ -97,7 +78,7 @@ export const ALL_VOCAB: WordEntry[] = [
     {
         word: 'think',
         difficulty: 'reception',
-        definition: 'To use your mind.',
+        definition: 'To use your mind, to try and solve a problem or understand something.',
         synonyms: ['cogitate', 'cerebrate'],
         antonyms: [],
     },
@@ -114,20 +95,6 @@ export const ALL_VOCAB: WordEntry[] = [
         definition: 'A piece of something.',
         synonyms: ['piece'],
         antonyms: [],
-    },
-    {
-        word: 'only',
-        difficulty: 'reception',
-        definition: 'Just one, or no more.',
-        synonyms: ['entirely', 'exclusively', 'solely'],
-        antonyms: [],
-    },
-    {
-        word: 'our',
-        difficulty: 'reception',
-        definition: 'Belonging to us.',
-        synonyms: ['belonging to us'],
-        antonyms: ['their'],
     },
     {
         word: 'say',
@@ -193,13 +160,6 @@ export const ALL_VOCAB: WordEntry[] = [
         antonyms: ['woman'],
     },
     {
-        word: 'name',
-        difficulty: 'reception',
-        definition: 'The word used for a person or thing.',
-        synonyms: [],
-        antonyms: [],
-    },
-    {
         word: 'low',
         difficulty: 'reception',
         definition: 'Not high.',
@@ -216,7 +176,7 @@ export const ALL_VOCAB: WordEntry[] = [
     {
         word: 'place',
         difficulty: 'reception',
-        definition: 'A spot or area.',
+        definition: 'A location or area.',
         synonyms: ['property'],
         antonyms: [],
     },

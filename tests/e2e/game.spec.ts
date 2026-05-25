@@ -18,8 +18,10 @@ declare global {
             getBaseHealth: () => number;
             getElapsedMs: () => number;
             isPaused: () => boolean;
-            getDifficulty: () => string;
-            setDifficulty: (difficulty: 'veryEasy' | 'easy' | 'medium' | 'hard' | 'veryHard') => void;
+            getSpawnRate: () => string;
+            setSpawnRate: (spawnRate: 'veryEasy' | 'easy' | 'medium' | 'hard' | 'veryHard') => void;
+            getBaseDifficulty: () => string;
+            setBaseDifficulty: (difficulty: 'reception' | 'year1' | 'year2' | 'year3' | 'year4' | 'year5') => void;
             spawnEnemyNearBase: () => void;
         };
     }
@@ -52,8 +54,11 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
 
     await page.getByTestId('settings-button').click();
     await expect(page.getByTestId('settings-popup')).toBeVisible();
-    await page.getByTestId('difficulty-hard').click();
-    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getDifficulty())).toBe('hard');
+    await page.getByTestId('spawn-rate-select').selectOption('hard');
+    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getSpawnRate())).toBe('hard');
+    await page.getByTestId('base-difficulty-select').selectOption('year1');
+    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getBaseDifficulty())).toBe('year1');
+    await page.getByTestId('settings-button').click();
     await expect(page.getByTestId('settings-popup')).toBeHidden();
 
     const screenshot = await page.locator('canvas').screenshot();
@@ -89,6 +94,7 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     expect(buildable).not.toBeNull();
     await clickGamePoint(page, buildable!.worldX, buildable!.worldY);
     await expect(page.getByTestId('build-popup')).toBeVisible();
+    await expect(page.getByTestId('build-popup')).toContainText('Year 3');
     await expect(page.getByTestId('pause-overlay')).toBeHidden();
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.isPaused())).toBe(true);
     const questionPausedElapsedMs = await page.evaluate(() => window.vocabAnnihilation!.getElapsedMs());

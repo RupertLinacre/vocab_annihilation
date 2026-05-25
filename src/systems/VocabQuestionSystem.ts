@@ -5,24 +5,68 @@ import type { NormalizedVocabEntry, TowerDifficulty, VocabQuestion } from '../ty
 
 const DIFFICULTY_ORDER: TowerDifficulty[] = ['easy', 'medium', 'hard', 'veryHard'];
 
-export function mapRawDifficultyToTowerDifficulty(difficulty: RawVocabDifficulty): TowerDifficulty {
-    if (difficulty === 'reception' || difficulty === 'year1' || difficulty === 'year2') {
+export const BASE_VOCAB_DIFFICULTIES = ['reception', 'year1', 'year2', 'year3', 'year4', 'year5'] as const;
+
+export type BaseVocabDifficulty = (typeof BASE_VOCAB_DIFFICULTIES)[number];
+
+const RAW_DIFFICULTY_ORDER: RawVocabDifficulty[] = ['reception', 'year1', 'year2', 'year3', 'year4', 'year5', 'year6', 'year6Plus', 'year6PlusPlus'];
+
+export const RAW_VOCAB_DIFFICULTY_LABELS: Record<RawVocabDifficulty, string> = {
+    reception: 'Reception',
+    year1: 'Year 1',
+    year2: 'Year 2',
+    year3: 'Year 3',
+    year4: 'Year 4',
+    year5: 'Year 5',
+    year6: 'Year 6',
+    year6Plus: 'Year 6+',
+    year6PlusPlus: 'Year 6++',
+};
+
+const TOWER_DIFFICULTY_OFFSETS: Record<TowerDifficulty, number> = {
+    easy: 0,
+    medium: 1,
+    hard: 2,
+    veryHard: 3,
+};
+
+function clampDifficultyIndex(index: number): number {
+    return Math.max(0, Math.min(index, RAW_DIFFICULTY_ORDER.length - 1));
+}
+
+export function mapTowerDifficultyToRawDifficulty(difficulty: TowerDifficulty, baseDifficulty: BaseVocabDifficulty = 'reception'): RawVocabDifficulty {
+    const baseIndex = RAW_DIFFICULTY_ORDER.indexOf(baseDifficulty);
+    const rawIndex = clampDifficultyIndex(baseIndex + TOWER_DIFFICULTY_OFFSETS[difficulty]);
+    return RAW_DIFFICULTY_ORDER[rawIndex];
+}
+
+export function mapRawDifficultyToTowerDifficulty(
+    difficulty: RawVocabDifficulty,
+    baseDifficulty: BaseVocabDifficulty = 'reception',
+): TowerDifficulty {
+    const rawIndex = RAW_DIFFICULTY_ORDER.indexOf(difficulty);
+    const baseIndex = RAW_DIFFICULTY_ORDER.indexOf(baseDifficulty);
+    const relativeIndex = clampDifficultyIndex(rawIndex - baseIndex);
+    if (relativeIndex <= 0) {
         return 'easy';
     }
-    if (difficulty === 'year3' || difficulty === 'year4') {
+    if (relativeIndex === 1) {
         return 'medium';
     }
-    if (difficulty === 'year5' || difficulty === 'year6') {
+    if (relativeIndex === 2) {
         return 'hard';
     }
     return 'veryHard';
 }
 
-export function normalizeVocab(entries: readonly WordEntry[] = ALL_VOCAB): NormalizedVocabEntry[] {
+export function normalizeVocab(
+    entries: readonly WordEntry[] = ALL_VOCAB,
+    baseDifficulty: BaseVocabDifficulty = 'reception',
+): NormalizedVocabEntry[] {
     return entries.map((entry) => ({
         word: entry.word,
         definition: entry.definition,
-        difficulty: mapRawDifficultyToTowerDifficulty(entry.difficulty),
+        difficulty: mapRawDifficultyToTowerDifficulty(entry.difficulty, baseDifficulty),
     }));
 }
 
@@ -35,11 +79,19 @@ function adjacentDifficulties(difficulty: TowerDifficulty): TowerDifficulty[] {
 }
 
 export class VocabQuestionSystem {
-    private readonly entries: NormalizedVocabEntry[];
+    private entries: NormalizedVocabEntry[];
     private lastQuestionWord: string | undefined;
 
-    constructor(private readonly rng: SeededRandom, entries: readonly NormalizedVocabEntry[] = normalizeVocab()) {
+    constructor(
+        private readonly rng: SeededRandom,
+        entries: readonly NormalizedVocabEntry[] = normalizeVocab(),
+    ) {
         this.entries = [...entries];
+    }
+
+    setEntries(entries: readonly NormalizedVocabEntry[]): void {
+        this.entries = [...entries];
+        this.lastQuestionWord = undefined;
     }
 
     createQuestion(difficulty: TowerDifficulty): VocabQuestion {

@@ -26,19 +26,28 @@
                 aria-expanded="false" aria-controls="settings-popup" data-testid="settings-button">⚙</button>
             <section id="settings-popup" class="settings-popup" hidden aria-label="Settings"
                 data-testid="settings-popup">
-                <h2>Difficulty</h2>
-                <div class="settings-options" role="group" aria-label="Difficulty">
-                    <button type="button" class="settings-option" data-difficulty-option="veryEasy"
-                        data-testid="difficulty-veryEasy">Very easy</button>
-                    <button type="button" class="settings-option" data-difficulty-option="easy"
-                        data-testid="difficulty-easy">Easy</button>
-                    <button type="button" class="settings-option" data-difficulty-option="medium"
-                        data-testid="difficulty-medium">Medium</button>
-                    <button type="button" class="settings-option" data-difficulty-option="hard"
-                        data-testid="difficulty-hard">Hard</button>
-                    <button type="button" class="settings-option" data-difficulty-option="veryHard"
-                        data-testid="difficulty-veryHard">Very hard</button>
-                </div>
+                <h2>Settings</h2>
+                <label class="settings-field" for="spawn-rate-select">
+                    <span>Spawn rate</span>
+                    <select id="spawn-rate-select" class="settings-select" data-testid="spawn-rate-select">
+                        <option value="veryEasy">Very low</option>
+                        <option value="easy">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">High</option>
+                        <option value="veryHard">Very high</option>
+                    </select>
+                </label>
+                <label class="settings-field" for="base-difficulty-select">
+                    <span>Base difficulty</span>
+                    <select id="base-difficulty-select" class="settings-select" data-testid="base-difficulty-select">
+                        <option value="reception">Reception</option>
+                        <option value="year1">Year 1</option>
+                        <option value="year2">Year 2</option>
+                        <option value="year3">Year 3</option>
+                        <option value="year4">Year 4</option>
+                        <option value="year5">Year 5</option>
+                    </select>
+                </label>
             </section>
             <section id="bottom-panel" class="bottom-panel is-open" aria-live="polite" data-testid="bottom-panel">
                 <div class="panel-toggle-row">
