@@ -5,6 +5,12 @@ import { VocabQuestionSystem } from '../systems/VocabQuestionSystem';
 import type { GridPoint, TowerDifficulty, TowerState, Vec2, VocabQuestion } from '../types';
 
 const BUILD_DIFFICULTIES: TowerDifficulty[] = ['easy', 'medium', 'hard', 'veryHard'];
+const TOWER_SELECTOR_OPTIONS: Record<TowerDifficulty, { imagePath: string; label: string }> = {
+    easy: { imagePath: '/sprites/turret_basic.png', label: 'Bullet' },
+    medium: { imagePath: '/sprites/turret_cluster.png', label: 'Spray' },
+    hard: { imagePath: '/sprites/turret_sidewinder.png', label: 'Homing missile' },
+    veryHard: { imagePath: '/sprites/turrent_cluster_bomb.png', label: 'Cluster' },
+};
 const BUILD_MENU_PADDING = 12;
 const BUILD_MENU_OFFSET = 14;
 
@@ -207,16 +213,10 @@ export class BottomPanel {
 
     private renderDifficultySelector(): void {
         this.body.innerHTML = '';
-        this.body.append(this.createParagraph('panel-section-title', 'Select tower type'));
         const row = this.createDiv('button-row difficulty-selector-row');
         BUILD_DIFFICULTIES.forEach((selection) => {
             const isSelected = selection === this.selectedBuildDifficulty;
-            const label = DIFFICULTY_LABELS[selection];
-            const button = this.createButton(
-                `difficulty-button difficulty-selector-button${isSelected ? ' is-selected' : ''}`,
-                label,
-                `select-${selection}`,
-            );
+            const button = this.createTowerSelectorButton(selection, isSelected);
             button.setAttribute('aria-pressed', String(isSelected));
             button.addEventListener('click', () => this.setSelectedBuildDifficulty(selection));
             row.append(button);
@@ -281,6 +281,31 @@ export class BottomPanel {
         button.className = className;
         button.textContent = text;
         button.dataset.testid = testId;
+        return button;
+    }
+
+    private createTowerSelectorButton(selection: TowerDifficulty, isSelected: boolean): HTMLButtonElement {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `difficulty-button difficulty-selector-button tower-selector-button${isSelected ? ' is-selected' : ''}`;
+        button.dataset.testid = `select-${selection}`;
+        button.setAttribute('aria-label', `${DIFFICULTY_LABELS[selection]} tower, ${TOWER_SELECTOR_OPTIONS[selection].label}`);
+
+        const image = document.createElement('img');
+        image.className = 'tower-selector-image';
+        image.src = TOWER_SELECTOR_OPTIONS[selection].imagePath;
+        image.alt = '';
+        image.decoding = 'async';
+
+        const label = document.createElement('span');
+        label.className = 'tower-selector-label';
+        label.textContent = TOWER_SELECTOR_OPTIONS[selection].label;
+
+        const content = document.createElement('span');
+        content.className = 'tower-selector-content';
+        content.append(label);
+
+        button.append(image, content);
         return button;
     }
 }

@@ -254,7 +254,9 @@ body {
 
 .panel-toggle-row {
   display: flex;
-  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px;
 }
 
 .panel-toggle {
@@ -377,13 +379,13 @@ body {
   margin-top: 12px;
 }
 
-.panel-section-title {
+.panel-row-title {
   margin: 0;
   color: var(--muted);
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.01em;
-  text-align: center;
+  text-align: left;
 }
 
 .button-row,
@@ -411,8 +413,8 @@ body {
 }
 
 .difficulty-selector-button {
-  flex: 1 1 160px;
-  max-width: 220px;
+  flex: 1 1 180px;
+  max-width: 240px;
   text-align: center;
 }
 
@@ -420,6 +422,38 @@ body {
   border-color: rgba(243, 182, 75, 0.72);
   background: rgba(243, 182, 75, 0.18);
   color: #fff8df;
+}
+
+.tower-selector-button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 0;
+  height: 91px;
+  padding: 8px 12px;
+}
+
+.tower-selector-image {
+  width: auto;
+  height: 75px;
+  max-width: 100%;
+  flex: 0 0 auto;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.tower-selector-content {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  text-align: left;
+}
+
+.tower-selector-label {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .choice-button {
