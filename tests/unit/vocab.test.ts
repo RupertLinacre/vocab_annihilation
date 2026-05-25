@@ -85,4 +85,14 @@ describe('vocabulary questions and upgrades', () => {
         expect(mapRawDifficultyToTowerDifficulty('year3', 'year1')).toBe('hard');
         expect(mapRawDifficultyToTowerDifficulty('year4', 'year1')).toBe('veryHard');
     });
+
+    it('prefers simple wiktionary definitions when available and falls back otherwise', () => {
+        const normalized = normalizeVocab([
+            { word: 'after', definition: 'custom after definition', difficulty: 'reception', synonyms: [], antonyms: [] },
+            { word: 'slither', definition: 'custom slither definition', difficulty: 'year3', synonyms: [], antonyms: [] },
+        ]);
+
+        expect(normalized[0].definition).toBe('Later in time.');
+        expect(normalized[1].definition).toBe('custom slither definition');
+    });
 });
