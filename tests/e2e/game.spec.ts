@@ -80,15 +80,24 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     await expect(page.getByTestId('pause-overlay')).toBeHidden();
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.isPaused())).toBe(false);
 
+    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getElapsedMs())).toBeGreaterThan(3200);
+    expect(await page.evaluate(() => window.vocabAnnihilation!.getEnemyCount())).toBe(0);
+
     await page.keyboard.press('3');
 
     const buildable = await page.evaluate(() => window.vocabAnnihilation!.getFirstBuildableCell());
     expect(buildable).not.toBeNull();
     await clickGamePoint(page, buildable!.worldX, buildable!.worldY);
     await expect(page.getByTestId('build-popup')).toBeVisible();
+    await expect(page.getByTestId('pause-overlay')).toBeHidden();
+    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.isPaused())).toBe(true);
+    const questionPausedElapsedMs = await page.evaluate(() => window.vocabAnnihilation!.getElapsedMs());
+    await page.waitForTimeout(150);
+    expect(await page.evaluate(() => window.vocabAnnihilation!.getElapsedMs())).toBe(questionPausedElapsedMs);
     await expect(page.locator('[data-testid="build-popup"] .definition')).toBeVisible();
     await expect(page.getByText('Pick the word')).toHaveCount(0);
     await page.locator('[data-testid="answer-button"][data-correct="true"]').click();
+    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.isPaused())).toBe(false);
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getTowerCount())).toBe(1);
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getTowerTypes())).toEqual(['missile']);
 

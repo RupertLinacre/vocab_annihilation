@@ -148,6 +148,9 @@ export class GameScene extends Phaser.Scene {
     private selectedTower: TowerState | undefined;
     private gameOver = false;
     private isPaused = false;
+    private manualPauseRequested = false;
+    private questionPauseActive = false;
+    private spawningUnlocked = false;
     private debug: DebugToggles = { grid: true, ranges: false, flow: false, costs: false, los: false };
 
     constructor() {
@@ -177,6 +180,7 @@ export class GameScene extends Phaser.Scene {
             onBuild: (cell, difficulty) => this.buildTower(cell, difficulty),
             onUpgrade: (tower) => this.upgradeExistingTower(tower),
             onAnswered: (correct) => this.recordAnswer(correct),
+            onQuestionStateChange: (isActive) => this.setQuestionPause(isActive),
             onClose: () => this.clearSelection(),
         });
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.handlePointerDown(pointer));
@@ -195,11 +199,13 @@ export class GameScene extends Phaser.Scene {
         }
         this.elapsedMs += deltaMs;
         this.baseDamageFlashMs = Math.max(0, this.baseDamageFlashMs - deltaMs);
-        this.enemies.push(...this.spawner.update(deltaMs, this.towers, {
-            difficulty: this.difficulty,
-            baseHealthPercent: this.baseHealth / GAME_CONFIG.baseHealth,
-            activeEnemyCount: this.enemies.length,
-        }));
+        if (this.spawningUnlocked) {
+            this.enemies.push(...this.spawner.update(deltaMs, this.towers, {
+                difficulty: this.difficulty,
+                baseHealthPercent: this.baseHealth / GAME_CONFIG.baseHealth,
+                activeEnemyCount: this.enemies.length,
+            }));
+        }
         for (const enemy of this.enemies) {
             enemy.hurtFlashMs = Math.max(0, enemy.hurtFlashMs - deltaMs);
         }
@@ -272,6 +278,7 @@ export class GameScene extends Phaser.Scene {
             return;
         }
         this.towers.push(createTower(this.nextTowerId++, cell.x, cell.y, towerTypeForDifficulty(difficulty)));
+        this.spawningUnlocked = true;
         this.rebuildFlowField();
     }
 
@@ -384,20 +391,32 @@ export class GameScene extends Phaser.Scene {
         if (this.gameOver) {
             return;
         }
-        this.setPaused(!this.isPaused);
+        this.setManualPause(!this.manualPauseRequested);
     }
 
-    private setPaused(isPaused: boolean): void {
-        this.isPaused = isPaused;
+    private setManualPause(isPaused: boolean): void {
+        this.manualPauseRequested = isPaused;
+        this.syncPauseState();
+    }
+
+    private setQuestionPause(isPaused: boolean): void {
+        this.questionPauseActive = isPaused;
+        this.syncPauseState();
+    }
+
+    private syncPauseState(): void {
+        this.isPaused = this.manualPauseRequested || this.questionPauseActive;
         const pausedOverlay = document.querySelector<HTMLElement>('[data-testid="pause-overlay"]');
         if (pausedOverlay) {
-            pausedOverlay.hidden = !this.isPaused;
+            pausedOverlay.hidden = !this.manualPauseRequested;
         }
     }
 
     private setupPauseControls(): void {
-        document.querySelector<HTMLButtonElement>('[data-testid="resume-button"]')?.addEventListener('click', () => this.setPaused(false));
-        this.setPaused(false);
+        document.querySelector<HTMLButtonElement>('[data-testid="resume-button"]')?.addEventListener('click', () => this.setManualPause(false));
+        this.manualPauseRequested = false;
+        this.questionPauseActive = false;
+        this.syncPauseState();
     }
 
     private readSavedDifficulty(): GameDifficulty {

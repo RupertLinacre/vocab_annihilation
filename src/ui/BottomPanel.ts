@@ -16,6 +16,7 @@ interface BottomPanelCallbacks {
     onBuild: (cell: GridPoint, difficulty: TowerDifficulty) => void;
     onUpgrade: (tower: TowerState) => void;
     onAnswered: (correct: boolean) => void;
+    onQuestionStateChange: (isActive: boolean) => void;
     onClose: () => void;
 }
 
@@ -33,6 +34,7 @@ export class BottomPanel {
     private popupAnchor: Vec2 | undefined;
     private currentQuestion: VocabQuestion | undefined;
     private pendingAction: PendingAction | undefined;
+    private questionActive = false;
     private selectedBuildDifficulty: BuildDifficultySelection = 'easy';
     private panelExpanded = true;
 
@@ -73,6 +75,7 @@ export class BottomPanel {
 
     close(): void {
         this.clearPendingClose();
+        this.setQuestionActive(false);
         this.hideBuildMenu();
         this.popupAnchor = undefined;
         this.currentQuestion = undefined;
@@ -90,6 +93,7 @@ export class BottomPanel {
         this.hideBuildMenu();
         this.pendingAction = action;
         this.currentQuestion = this.vocab.createQuestion(action.difficulty);
+        this.setQuestionActive(true);
         this.showAnswerPopup();
     }
 
@@ -99,6 +103,7 @@ export class BottomPanel {
         }
 
         const correct = choice === this.currentQuestion.correctWord;
+        this.setQuestionActive(false);
         this.callbacks.onAnswered(correct);
         if (correct) {
             this.buildMenu.append(this.createParagraph('feedback good', 'Correct'));
@@ -169,6 +174,7 @@ export class BottomPanel {
             return;
         }
 
+        this.setQuestionActive(false);
         this.hideBuildMenu();
 
         const header = this.createDiv('build-popup-header');
@@ -191,6 +197,14 @@ export class BottomPanel {
         this.buildMenu.hidden = false;
         this.buildMenu.classList.add('is-open');
         this.positionBuildMenu(this.popupAnchor);
+    }
+
+    private setQuestionActive(isActive: boolean): void {
+        if (this.questionActive === isActive) {
+            return;
+        }
+        this.questionActive = isActive;
+        this.callbacks.onQuestionStateChange(isActive);
     }
 
     private renderDifficultySelector(): void {
