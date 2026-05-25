@@ -141,6 +141,7 @@ export class GameScene extends Phaser.Scene {
     private graphics!: Phaser.GameObjects.Graphics;
     private debugGraphics!: Phaser.GameObjects.Graphics;
     private towerSprites = new Map<number, Phaser.GameObjects.Image>();
+    private enemyShadows = new Map<number, Phaser.GameObjects.Image>();
     private enemySprites = new Map<number, Phaser.GameObjects.Image>();
     private costTexts: Phaser.GameObjects.Text[] = [];
     private panel!: BottomPanel;
@@ -709,15 +710,32 @@ export class GameScene extends Phaser.Scene {
         const { cellSize } = GAME_CONFIG.map;
         for (const enemy of this.enemies) {
             activeIds.add(enemy.id);
+            const textureKey = this.getEnemyTextureKey(enemy);
+            const spriteSize = this.getEnemySpriteMaxSize(enemy, cellSize);
+            const shadowOffsetX = Math.max(3, enemy.radius * 0.14);
+            const shadowOffsetY = Math.max(4, enemy.radius * 0.2);
+            const depth = 2 + enemy.y / 10000;
+            let shadow = this.enemyShadows.get(enemy.id);
+            if (!shadow) {
+                shadow = this.add.image(enemy.x + shadowOffsetX, enemy.y + shadowOffsetY, textureKey);
+                shadow.setTint(0x000000);
+                shadow.setAlpha(0.24);
+                this.enemyShadows.set(enemy.id, shadow);
+            }
             let sprite = this.enemySprites.get(enemy.id);
             if (!sprite) {
-                sprite = this.add.image(enemy.x, enemy.y, this.getEnemyTextureKey(enemy));
+                sprite = this.add.image(enemy.x, enemy.y, textureKey);
                 this.enemySprites.set(enemy.id, sprite);
             }
-            sprite.setTexture(this.getEnemyTextureKey(enemy));
+            shadow.setTexture(textureKey);
+            shadow.setPosition(enemy.x + shadowOffsetX, enemy.y + shadowOffsetY);
+            this.setEnemySpriteSize(shadow, spriteSize * 1.03);
+            shadow.setDepth(depth - 0.01);
+
+            sprite.setTexture(textureKey);
             sprite.setPosition(enemy.x, enemy.y);
-            this.setEnemySpriteSize(sprite, this.getEnemySpriteMaxSize(enemy, cellSize));
-            sprite.setDepth(2 + enemy.y / 10000);
+            this.setEnemySpriteSize(sprite, spriteSize);
+            sprite.setDepth(depth);
 
             const barWidth = enemy.radius * 2.1;
             const healthPercent = Math.max(0, enemy.health / enemy.maxHealth);
@@ -731,6 +749,12 @@ export class GameScene extends Phaser.Scene {
             if (!activeIds.has(enemyId)) {
                 sprite.destroy();
                 this.enemySprites.delete(enemyId);
+            }
+        }
+        for (const [enemyId, shadow] of this.enemyShadows) {
+            if (!activeIds.has(enemyId)) {
+                shadow.destroy();
+                this.enemyShadows.delete(enemyId);
             }
         }
     }
