@@ -222,13 +222,7 @@ export const ALL_VOCAB: WordEntry[] = [
         synonyms: ['arrived', 'approached'],
         antonyms: ['left'],
     },
-    {
-        word: 'through',
-        difficulty: 'reception',
-        definition: 'From one side to the other.',
-        synonyms: ['done', 'through with'],
-        antonyms: [],
-    },
+
     {
         word: 'before',
         difficulty: 'reception',
@@ -236,13 +230,7 @@ export const ALL_VOCAB: WordEntry[] = [
         synonyms: ['earlier'],
         antonyms: [],
     },
-    {
-        word: 'too',
-        difficulty: 'reception',
-        definition: 'Also; as well.',
-        synonyms: ['excessively', 'overly', 'to a fault'],
-        antonyms: [],
-    },
+
     {
         word: 'live',
         difficulty: 'reception',
@@ -257,13 +245,7 @@ export const ALL_VOCAB: WordEntry[] = [
         synonyms: ['demo', 'exhibit', 'present'],
         antonyms: [],
     },
-    {
-        word: 'just',
-        difficulty: 'reception',
-        definition: 'Exactly, or only.',
-        synonyms: [],
-        antonyms: ['unjust'],
-    },
+
     {
         word: 'turn',
         difficulty: 'reception',
@@ -271,13 +253,7 @@ export const ALL_VOCAB: WordEntry[] = [
         synonyms: ['call on'],
         antonyms: [],
     },
-    {
-        word: 'does',
-        difficulty: 'reception',
-        definition: 'Works or acts.',
-        synonyms: ['performs', 'acts'],
-        antonyms: ['stops'],
-    },
+
     {
         word: 'where',
         difficulty: 'reception',
@@ -288,17 +264,11 @@ export const ALL_VOCAB: WordEntry[] = [
     {
         word: 'every',
         difficulty: 'reception',
-        definition: 'Each one.',
+        definition: 'All of them, each one.',
         synonyms: [],
         antonyms: [],
     },
-    {
-        word: 'form',
-        difficulty: 'reception',
-        definition: 'Shape.',
-        synonyms: ['shape', 'pattern'],
-        antonyms: [],
-    },
+
     {
         word: 'cause',
         difficulty: 'reception',
