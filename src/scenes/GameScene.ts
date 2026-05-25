@@ -40,7 +40,7 @@ const SPRITE_PATHS = {
     towerCluster: 'sprites/turret_cluster.png',
     towerClusterBomb: 'sprites/turrent_cluster_bomb.png',
     towerSidewinder: 'sprites/turret_sidewinder.png',
-    wallPlaceholder: 'sprites/wall_placeholder.svg',
+    wall: 'sprites/wall.png',
     monster1Run: 'sprites/monster_1_run.png',
     monster1Stop: 'sprites/monster_1_stop.png',
     monster1Hurt: 'sprites/monster_1_hurt.png',
@@ -78,7 +78,7 @@ const TOWER_TEXTURES: Record<TowerType, string> = {
     spray: SPRITE_PATHS.towerCluster,
     missile: SPRITE_PATHS.towerSidewinder,
     cluster: SPRITE_PATHS.towerClusterBomb,
-    wall: SPRITE_PATHS.wallPlaceholder,
+    wall: SPRITE_PATHS.wall,
 };
 
 const ENEMY_TEXTURES = {

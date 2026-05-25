@@ -11,7 +11,7 @@ const TOWER_SELECTOR_OPTIONS: Record<TowerType, { imagePath: string; label: stri
     spray: { imagePath: spritePath('sprites/turret_cluster.png'), label: 'Spray', testId: 'select-medium' },
     missile: { imagePath: spritePath('sprites/turret_sidewinder.png'), label: 'Homing missile', testId: 'select-hard' },
     cluster: { imagePath: spritePath('sprites/turrent_cluster_bomb.png'), label: 'Cluster', testId: 'select-veryHard' },
-    wall: { imagePath: spritePath('sprites/wall_placeholder.svg'), label: 'Wall', testId: 'select-wall' },
+    wall: { imagePath: spritePath('sprites/wall.png'), label: 'Wall', testId: 'select-wall' },
 };
 const BUILD_MENU_PADDING = 12;
 const BUILD_MENU_OFFSET = 14;
