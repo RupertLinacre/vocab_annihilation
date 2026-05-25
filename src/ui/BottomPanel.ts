@@ -6,13 +6,17 @@ import type { GridPoint, TowerDifficulty, TowerState, Vec2, VocabQuestion } from
 
 const BUILD_DIFFICULTIES: TowerDifficulty[] = ['easy', 'medium', 'hard', 'veryHard'];
 const TOWER_SELECTOR_OPTIONS: Record<TowerDifficulty, { imagePath: string; label: string }> = {
-    easy: { imagePath: '/sprites/turret_basic.png', label: 'Bullet' },
-    medium: { imagePath: '/sprites/turret_cluster.png', label: 'Spray' },
-    hard: { imagePath: '/sprites/turret_sidewinder.png', label: 'Homing missile' },
-    veryHard: { imagePath: '/sprites/turrent_cluster_bomb.png', label: 'Cluster' },
+    easy: { imagePath: 'sprites/turret_basic.png', label: 'Bullet' },
+    medium: { imagePath: 'sprites/turret_cluster.png', label: 'Spray' },
+    hard: { imagePath: 'sprites/turret_sidewinder.png', label: 'Homing missile' },
+    veryHard: { imagePath: 'sprites/turrent_cluster_bomb.png', label: 'Cluster' },
 };
 const BUILD_MENU_PADDING = 12;
 const BUILD_MENU_OFFSET = 14;
+
+function resolvePublicAssetPath(assetPath: string): string {
+    return `${import.meta.env.BASE_URL}${assetPath.replace(/^\//, '')}`;
+}
 
 export type BuildDifficultySelection = TowerDifficulty;
 
@@ -293,7 +297,7 @@ export class BottomPanel {
 
         const image = document.createElement('img');
         image.className = 'tower-selector-image';
-        image.src = TOWER_SELECTOR_OPTIONS[selection].imagePath;
+        image.src = resolvePublicAssetPath(TOWER_SELECTOR_OPTIONS[selection].imagePath);
         image.alt = '';
         image.decoding = 'async';
 
