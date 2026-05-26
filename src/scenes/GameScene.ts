@@ -13,7 +13,7 @@ import { calculateTowerThreatCosts, createEmptyCostGrid, type CostGrid, getTower
 import { EnemySpawner, isGameDifficulty, type GameDifficulty } from '../systems/EnemySpawner';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
 import { TowerSystem } from '../systems/TowerSystem';
-import { attackNearestWallIfPathBlocked } from '../systems/WallSystem';
+import { updateEnemyWallObjective } from '../systems/WallSystem';
 import {
     BASE_VOCAB_DIFFICULTIES,
     normalizeVocab,
@@ -236,8 +236,8 @@ export class GameScene extends Phaser.Scene {
         let baseDamageTaken = 0;
         let wallDestroyed = false;
         for (const enemy of this.enemies) {
-            const wallAttack = attackNearestWallIfPathBlocked(enemy, deltaMs / 1000, this.towers, this.flowField, this.generatedMap.grid, GAME_CONFIG.map);
-            if (wallAttack.attacked) {
+            const wallAttack = updateEnemyWallObjective(enemy, deltaMs / 1000, this.towers, this.flowField, this.generatedMap.grid, GAME_CONFIG.map, this.enemies, this.threatCosts);
+            if (wallAttack.targetedWall) {
                 if (wallAttack.destroyedWall) {
                     this.removeWall(wallAttack.destroyedWall);
                     wallDestroyed = true;
