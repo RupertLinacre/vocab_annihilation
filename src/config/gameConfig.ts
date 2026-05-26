@@ -47,6 +47,7 @@ export const TOWER_BUILD_DIFFICULTIES: Record<TowerType, TowerDifficulty> = {
     missile: 'hard',
     cluster: 'veryHard',
     wall: 'veryHard',
+    mine: 'veryHard',
 };
 
 export const TOWER_UPGRADE_DIFFICULTIES: Record<TowerType, TowerDifficulty[]> = {
@@ -55,6 +56,7 @@ export const TOWER_UPGRADE_DIFFICULTIES: Record<TowerType, TowerDifficulty[]> = 
     missile: ['hard', 'hard', 'hard', 'veryHard', 'veryHard', 'veryHard', 'veryHard'],
     cluster: ['veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard'],
     wall: [],
+    mine: ['veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard'],
 };
 
 export const TOWER_LABELS: Record<TowerType, string> = {
@@ -63,6 +65,7 @@ export const TOWER_LABELS: Record<TowerType, string> = {
     missile: 'Hard Missile Tower',
     cluster: 'Very Hard Cluster Tower',
     wall: 'Very Hard Wall',
+    mine: 'Very Hard Mine',
 };
 
 export const DIFFICULTY_LABELS: Record<TowerDifficulty, string> = {
@@ -76,6 +79,8 @@ export interface TowerLevelStats {
     range: number;
     cooldownMs: number;
     damage: number;
+    triggerRadius?: number;
+    knockbackDistance?: number;
     bulletSpeed?: number;
     pelletCount?: number;
     spreadRadians?: number;
@@ -132,6 +137,16 @@ export const TOWER_STATS: Record<TowerType, TowerLevelStats[]> = {
     wall: [
         { range: 0, cooldownMs: 0, damage: 0, threat: 0 },
     ],
+    mine: [
+        { range: 56, cooldownMs: 0, damage: 78, triggerRadius: 13, explosionRadius: 56, knockbackDistance: 28, threat: 2.6 },
+        { range: 64, cooldownMs: 0, damage: 96, triggerRadius: 14, explosionRadius: 64, knockbackDistance: 34, threat: 3.2 },
+        { range: 74, cooldownMs: 0, damage: 118, triggerRadius: 15, explosionRadius: 74, knockbackDistance: 40, threat: 3.9 },
+        { range: 84, cooldownMs: 0, damage: 144, triggerRadius: 16, explosionRadius: 84, knockbackDistance: 48, threat: 4.7 },
+        { range: 96, cooldownMs: 0, damage: 174, triggerRadius: 17, explosionRadius: 96, knockbackDistance: 58, threat: 5.6 },
+        { range: 110, cooldownMs: 0, damage: 208, triggerRadius: 18, explosionRadius: 110, knockbackDistance: 68, threat: 6.6 },
+        { range: 124, cooldownMs: 0, damage: 246, triggerRadius: 19, explosionRadius: 124, knockbackDistance: 80, threat: 7.8 },
+        { range: 140, cooldownMs: 0, damage: 290, triggerRadius: 21, explosionRadius: 140, knockbackDistance: 94, threat: 9.1 },
+    ],
 };
 
 export interface EnemyStats {
@@ -159,4 +174,5 @@ export const TOWER_COLORS: Record<TowerType, number> = {
     missile: 0xbde0fe,
     cluster: 0xf15bb5,
     wall: 0xe53935,
+    mine: 0x2b2b2b,
 };

@@ -4,14 +4,15 @@ import { getTowerStats } from '../pathfinding/ThreatMap';
 import { VocabQuestionSystem } from '../systems/VocabQuestionSystem';
 import type { GridPoint, TowerDifficulty, TowerState, TowerType, Vec2, VocabQuestion } from '../types';
 
-const BUILD_TOWER_TYPES: TowerType[] = ['easy', 'spray', 'missile', 'cluster', 'wall'];
+const BUILD_TOWER_TYPES: TowerType[] = ['easy', 'spray', 'missile', 'cluster', 'wall', 'mine'];
 const spritePath = (path: string): string => `${import.meta.env.BASE_URL}${path}`;
-const TOWER_SELECTOR_OPTIONS: Record<TowerType, { imagePath: string; label: string; testId: string }> = {
+const TOWER_SELECTOR_OPTIONS: Record<TowerType, { imagePath?: string; markerClassName?: string; label: string; testId: string }> = {
     easy: { imagePath: spritePath('sprites/turret_basic.png'), label: 'Bullet', testId: 'select-easy' },
     spray: { imagePath: spritePath('sprites/turret_cluster.png'), label: 'Spray', testId: 'select-medium' },
     missile: { imagePath: spritePath('sprites/turret_sidewinder.png'), label: 'Homing missile', testId: 'select-hard' },
     cluster: { imagePath: spritePath('sprites/turrent_cluster_bomb.png'), label: 'Cluster', testId: 'select-veryHard' },
     wall: { imagePath: spritePath('sprites/wall.png'), label: 'Wall', testId: 'select-wall' },
+    mine: { markerClassName: 'tower-selector-marker tower-selector-marker-mine', label: 'Mine', testId: 'select-mine' },
 };
 const BUILD_MENU_PADDING = 12;
 const BUILD_MENU_OFFSET = 14;
@@ -299,11 +300,21 @@ export class BottomPanel {
         button.dataset.testid = option.testId;
         button.setAttribute('aria-label', `${DIFFICULTY_LABELS[TOWER_BUILD_DIFFICULTIES[selection]]} tower, ${option.label}`);
 
-        const image = document.createElement('img');
-        image.className = 'tower-selector-image';
-        image.src = option.imagePath;
-        image.alt = '';
-        image.decoding = 'async';
+        const marker = option.imagePath
+            ? (() => {
+                const image = document.createElement('img');
+                image.className = 'tower-selector-image';
+                image.src = option.imagePath;
+                image.alt = '';
+                image.decoding = 'async';
+                return image;
+            })()
+            : (() => {
+                const chip = document.createElement('span');
+                chip.className = option.markerClassName ?? 'tower-selector-marker';
+                chip.setAttribute('aria-hidden', 'true');
+                return chip;
+            })();
 
         const label = document.createElement('span');
         label.className = 'tower-selector-label';
@@ -313,7 +324,7 @@ export class BottomPanel {
         content.className = 'tower-selector-content';
         content.append(label);
 
-        button.append(image, content);
+        button.append(marker, content);
         return button;
     }
 }

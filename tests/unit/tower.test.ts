@@ -5,6 +5,7 @@ import { calculateTotalTowerDamagePerSecond, calculateTowerDamagePerSecond, canU
 import { cellCenter, Grid } from '../../src/map/Grid';
 import { buildFlowField } from '../../src/pathfinding/FlowField';
 import { createEmptyCostGrid } from '../../src/pathfinding/ThreatMap';
+import { TowerSystem } from '../../src/systems/TowerSystem';
 import type { TowerState } from '../../src/types';
 
 describe('tower target selection', () => {
@@ -48,5 +49,29 @@ describe('tower target selection', () => {
         expect(canUpgradeTower(wall)).toBe(false);
         expect(calculateTowerDamagePerSecond(wall)).toBe(0);
         expect(calculateTotalTowerDamagePerSecond([wall])).toBe(0);
+    });
+
+    it('detonates mines once with primary kill, radial damage, and knockback', () => {
+        const grid = new Grid(8, 5, 'grass');
+        const flow = buildFlowField(grid, { x: 7, y: 2 }, createEmptyCostGrid(grid));
+        const mine = createTower(1, 2, 2, 'mine');
+        const center = cellCenter({ x: mine.gridX, y: mine.gridY }, GAME_CONFIG.map);
+        const primary = createEnemy(1, 'scout', center.x, center.y);
+        const splash = createEnemy(2, 'grunt', center.x + 36, center.y);
+        const outside = createEnemy(3, 'grunt', center.x + 96, center.y);
+        const splashStartX = splash.x;
+        const outsideStartHealth = outside.health;
+
+        const result = new TowerSystem().update(16, [mine], [primary, splash, outside], grid, GAME_CONFIG.map, flow);
+
+        expect(result.detonatedTowerIds).toEqual([mine.id]);
+        expect(result.projectiles).toEqual([]);
+        expect(result.explosions).toHaveLength(1);
+        expect(result.kills).toBe(1);
+        expect(primary.health).toBeLessThanOrEqual(0);
+        expect(splash.health).toBeLessThan(splash.maxHealth);
+        expect(splash.health).toBeGreaterThan(0);
+        expect(splash.x).toBeGreaterThan(splashStartX);
+        expect(outside.health).toBe(outsideStartHealth);
     });
 });

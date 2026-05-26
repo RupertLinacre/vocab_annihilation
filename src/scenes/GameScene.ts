@@ -81,6 +81,7 @@ const TOWER_TEXTURES: Record<TowerType, string> = {
     missile: SPRITE_PATHS.towerSidewinder,
     cluster: SPRITE_PATHS.towerClusterBomb,
     wall: SPRITE_PATHS.wall,
+    mine: SPRITE_PATHS.wall,
 };
 
 const ENEMY_TEXTURES = {
@@ -96,6 +97,7 @@ const BUILD_SHORTCUTS: Record<string, BuildTowerSelection> = {
     '3': 'missile',
     '4': 'cluster',
     '5': 'wall',
+    '6': 'mine',
 };
 
 const TOWER_SPRITE_MAX_SIZE = GAME_CONFIG.map.cellSize * 1.2;
@@ -251,7 +253,7 @@ export class GameScene extends Phaser.Scene {
             const wallAttack = updateEnemyWallObjective(enemy, deltaMs / 1000, this.towers, this.flowField, this.generatedMap.grid, GAME_CONFIG.map, this.enemies, this.threatCosts);
             if (wallAttack.targetedWall) {
                 if (wallAttack.destroyedWall) {
-                    this.removeWall(wallAttack.destroyedWall);
+                    this.destroyTower(wallAttack.destroyedWall);
                     wallDestroyed = true;
                 }
                 if (enemy.health > 0) {
@@ -278,7 +280,20 @@ export class GameScene extends Phaser.Scene {
 
         const towerResult = this.towerSystem.update(deltaMs, this.towers, this.enemies, this.generatedMap.grid, GAME_CONFIG.map, this.flowField);
         this.projectiles.push(...towerResult.projectiles);
+        this.kills += towerResult.kills;
+        this.explosions.push(...towerResult.explosions);
         this.playRepeatedSound(SOUND_KEYS.pop, towerResult.shotsFired, 0.18);
+        this.playRepeatedSound(SOUND_KEYS.owHurt, towerResult.hurtSounds, 0.2);
+        this.playRepeatedSound(SOUND_KEYS.owDeath, towerResult.deathSounds, 0.28);
+        if (towerResult.detonatedTowerIds.length > 0) {
+            for (const towerId of towerResult.detonatedTowerIds) {
+                const tower = this.towers.find((candidate) => candidate.id === towerId);
+                if (tower) {
+                    this.destroyTower(tower);
+                }
+            }
+            this.rebuildFlowField();
+        }
 
         const projectileResult = this.projectileSystem.update(deltaMs, this.projectiles, this.enemies, this.generatedMap.grid, GAME_CONFIG.map);
         this.projectiles = projectileResult.projectiles;
@@ -349,14 +364,16 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    private removeWall(wall: TowerState): void {
-        const index = this.towers.findIndex((tower) => tower.id === wall.id);
+    private destroyTower(tower: TowerState): void {
+        const index = this.towers.findIndex((candidate) => candidate.id === tower.id);
         if (index === -1) {
             return;
         }
         this.towers.splice(index, 1);
-        this.generatedMap.grid.setTerrain(wall.gridX, wall.gridY, wall.baseTerrain ?? 'grass');
-        if (this.selectedTower?.id === wall.id) {
+        if (tower.type === 'wall') {
+            this.generatedMap.grid.setTerrain(tower.gridX, tower.gridY, tower.baseTerrain ?? 'grass');
+        }
+        if (this.selectedTower?.id === tower.id) {
             this.panel.close();
         }
     }
@@ -761,6 +778,22 @@ export class GameScene extends Phaser.Scene {
         for (const tower of this.towers) {
             activeIds.add(tower.id);
             const center = cellCenter({ x: tower.gridX, y: tower.gridY }, GAME_CONFIG.map);
+            if (tower.type === 'mine') {
+                const existingSprite = this.towerSprites.get(tower.id);
+                if (existingSprite) {
+                    existingSprite.destroy();
+                    this.towerSprites.delete(tower.id);
+                }
+                this.graphics.fillStyle(0x050505, tower === this.selectedTower ? 1 : 0.94);
+                this.graphics.fillCircle(center.x, center.y, cellSize * 0.22);
+                this.graphics.lineStyle(2, 0xf7f0d6, tower === this.selectedTower ? 0.62 : 0.34);
+                this.graphics.strokeCircle(center.x, center.y, cellSize * 0.22);
+                this.graphics.fillStyle(0x101614, 0.9);
+                for (let level = 0; level < tower.level; level += 1) {
+                    this.graphics.fillCircle(center.x - 10 + level * 5, center.y + 18, 2);
+                }
+                continue;
+            }
             let sprite = this.towerSprites.get(tower.id);
             if (!sprite) {
                 sprite = this.add.image(center.x, center.y, TOWER_TEXTURES[tower.type]).setDepth(2);

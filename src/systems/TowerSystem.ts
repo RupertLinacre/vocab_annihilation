@@ -1,13 +1,18 @@
 import type { EnemyState, MapGeometry, ProjectileState, TowerState } from '../types';
 import { getTowerStats } from '../pathfinding/ThreatMap';
 import { isWallTower, selectTowerTarget } from '../entities/Tower';
-import { cellCenter, Grid } from '../map/Grid';
+import { cellCenter, Grid, worldToGrid } from '../map/Grid';
 import type { FlowField } from '../pathfinding/FlowField';
 import { createProjectile } from '../entities/Projectile';
 
 export interface TowerUpdateResult {
     projectiles: ProjectileState[];
     shotsFired: number;
+    kills: number;
+    explosions: { x: number; y: number; radius: number; lifeMs: number }[];
+    hurtSounds: number;
+    deathSounds: number;
+    detonatedTowerIds: number[];
 }
 
 function normalize(dx: number, dy: number): { x: number; y: number } {
@@ -15,14 +20,71 @@ function normalize(dx: number, dy: number): { x: number; y: number } {
     return { x: dx / length, y: dy / length };
 }
 
+function applyDamage(enemy: EnemyState, damage: number): boolean {
+    const wasAlive = enemy.health > 0;
+    enemy.health -= damage;
+    enemy.hurtFlashMs = 120;
+    return wasAlive && enemy.health <= 0;
+}
+
+function applyKnockback(enemy: EnemyState, originX: number, originY: number, distance: number, grid: Grid, geometry: MapGeometry): void {
+    if (distance <= 0 || enemy.health <= 0) {
+        return;
+    }
+
+    let direction = normalize(enemy.x - originX, enemy.y - originY);
+    if (Math.abs(direction.x) < 0.001 && Math.abs(direction.y) < 0.001) {
+        direction = normalize(enemy.vx, enemy.vy);
+    }
+    if (Math.abs(direction.x) < 0.001 && Math.abs(direction.y) < 0.001) {
+        direction = { x: 1, y: 0 };
+    }
+
+    const stepSize = Math.max(5, geometry.cellSize * 0.16);
+    let remaining = distance;
+    while (remaining > 0.001) {
+        const step = Math.min(stepSize, remaining);
+        const candidate = { x: enemy.x + direction.x * step, y: enemy.y + direction.y * step };
+        const cell = worldToGrid(candidate, grid, geometry);
+        if (!cell || grid.isBlocked(cell.x, cell.y)) {
+            break;
+        }
+        enemy.x = candidate.x;
+        enemy.y = candidate.y;
+        remaining -= step;
+    }
+
+    enemy.vx *= 0.28;
+    enemy.vy *= 0.28;
+    enemy.lastProgressDistance = Number.POSITIVE_INFINITY;
+    enemy.stalledSeconds = 0;
+}
+
 export class TowerSystem {
     private nextProjectileId = 1;
 
-    update(deltaMs: number, towers: TowerState[], enemies: readonly EnemyState[], grid: Grid, geometry: MapGeometry, flowField: FlowField): TowerUpdateResult {
+    update(deltaMs: number, towers: TowerState[], enemies: EnemyState[], grid: Grid, geometry: MapGeometry, flowField: FlowField): TowerUpdateResult {
         const projectiles: ProjectileState[] = [];
+        const explosions: { x: number; y: number; radius: number; lifeMs: number }[] = [];
+        const detonatedTowerIds: number[] = [];
         let shotsFired = 0;
+        let kills = 0;
+        let hurtSounds = 0;
+        let deathSounds = 0;
         for (const tower of towers) {
             if (isWallTower(tower)) {
+                continue;
+            }
+            if (tower.type === 'mine') {
+                const result = this.tryDetonateMine(tower, enemies, grid, geometry);
+                if (!result) {
+                    continue;
+                }
+                detonatedTowerIds.push(tower.id);
+                explosions.push(result.explosion);
+                kills += result.kills;
+                hurtSounds += result.hurtSounds;
+                deathSounds += result.deathSounds;
                 continue;
             }
             tower.cooldownMs -= deltaMs;
@@ -73,6 +135,60 @@ export class TowerSystem {
             tower.cooldownMs = stats.cooldownMs;
             shotsFired += 1;
         }
-        return { projectiles, shotsFired };
+        return { projectiles, shotsFired, kills, explosions, hurtSounds, deathSounds, detonatedTowerIds };
+    }
+
+    private tryDetonateMine(
+        tower: TowerState,
+        enemies: EnemyState[],
+        grid: Grid,
+        geometry: MapGeometry,
+    ): { kills: number; hurtSounds: number; deathSounds: number; explosion: { x: number; y: number; radius: number; lifeMs: number } } | undefined {
+        const stats = getTowerStats(tower);
+        const center = cellCenter({ x: tower.gridX, y: tower.gridY }, geometry);
+        const triggerRadius = stats.triggerRadius ?? geometry.cellSize * 0.3;
+        const primaryTarget = enemies.find((enemy) => enemy.health > 0 && Math.hypot(enemy.x - center.x, enemy.y - center.y) <= enemy.radius + triggerRadius);
+        if (!primaryTarget) {
+            return undefined;
+        }
+
+        const explosionRadius = stats.explosionRadius ?? stats.range;
+        const maxKnockback = stats.knockbackDistance ?? 0;
+        let kills = 0;
+        let hurtSounds = 0;
+        let deathSounds = 0;
+
+        for (const enemy of enemies) {
+            if (enemy.health <= 0) {
+                continue;
+            }
+
+            const distance = Math.hypot(enemy.x - center.x, enemy.y - center.y);
+            if (distance > explosionRadius + enemy.radius * 0.5) {
+                continue;
+            }
+
+            const normalizedDistance = explosionRadius <= 0 ? 0 : Math.min(1, distance / explosionRadius);
+            const falloff = Math.max(0.18, 1 - normalizedDistance);
+            const damage = enemy.id === primaryTarget.id
+                ? Math.max(enemy.health + enemy.maxHealth, stats.damage)
+                : stats.damage * (0.3 + falloff * 0.7);
+            hurtSounds += 1;
+
+            if (applyDamage(enemy, damage)) {
+                kills += 1;
+                deathSounds += 1;
+                continue;
+            }
+
+            applyKnockback(enemy, center.x, center.y, maxKnockback * falloff, grid, geometry);
+        }
+
+        return {
+            kills,
+            hurtSounds,
+            deathSounds,
+            explosion: { x: center.x, y: center.y, radius: explosionRadius, lifeMs: 260 },
+        };
     }
 }
