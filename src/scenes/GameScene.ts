@@ -59,12 +59,14 @@ const SOUND_PATHS = {
     pop: 'audio/pop.mp3',
     owHurt: 'audio/ow_hurt.mp3',
     owDeath: 'audio/ow_death.mp3',
+    music: 'audio/music.m4a',
 } as const;
 
 const SOUND_KEYS = {
     pop: 'sound-pop',
     owHurt: 'sound-ow-hurt',
     owDeath: 'sound-ow-death',
+    music: 'sound-music',
 } as const;
 
 const TERRAIN_TEXTURES: Record<TerrainType, readonly string[]> = {
@@ -102,6 +104,8 @@ const ENEMY_SPRITE_MAX_SIZE = GAME_CONFIG.map.cellSize * 1.28;
 const LEGACY_DIFFICULTY_STORAGE_KEY = 'vocab-annihilation:difficulty';
 const SPAWN_RATE_STORAGE_KEY = 'vocab-annihilation:spawn-rate';
 const BASE_DIFFICULTY_STORAGE_KEY = 'vocab-annihilation:base-difficulty';
+const MUSIC_VOLUME_STORAGE_KEY = 'vocab-annihilation:music-volume';
+const MUSIC_MUTED_STORAGE_KEY = 'vocab-annihilation:music-muted';
 
 const SPAWN_RATE_LABELS: Record<GameDifficulty, string> = {
     veryEasy: 'Very low',
@@ -162,6 +166,9 @@ export class GameScene extends Phaser.Scene {
     private kills = 0;
     private answered = 0;
     private correctAnswers = 0;
+    private backgroundMusic?: HTMLAudioElement;
+    private musicVolume = 0.6;
+    private musicMuted = false;
     private nextTowerId = 1;
     private selectedCell: GridPoint | undefined;
     private selectedTower: TowerState | undefined;
@@ -183,6 +190,7 @@ export class GameScene extends Phaser.Scene {
         this.load.audio(SOUND_KEYS.pop, SOUND_PATHS.pop);
         this.load.audio(SOUND_KEYS.owHurt, SOUND_PATHS.owHurt);
         this.load.audio(SOUND_KEYS.owDeath, SOUND_PATHS.owDeath);
+        this.load.audio(SOUND_KEYS.music, SOUND_PATHS.music);
     }
 
     create(): void {
@@ -190,6 +198,9 @@ export class GameScene extends Phaser.Scene {
         const seed = seedParam ? SeededRandom.hash(seedParam) : Date.now() % 1000000000;
         this.spawnRate = this.readSavedSpawnRate();
         this.baseDifficulty = this.readSavedBaseDifficulty();
+        this.musicVolume = this.readSavedMusicVolume();
+        this.musicMuted = this.readSavedMusicMuted();
+        this.backgroundMusic = this.createBackgroundMusic();
         this.generatedMap = generateMap(seed);
         this.rebuildFlowField();
         this.graphics = this.add.graphics().setDepth(3);
@@ -204,6 +215,7 @@ export class GameScene extends Phaser.Scene {
             onQuestionStateChange: (isActive) => this.setQuestionPause(isActive),
             onClose: () => this.clearSelection(),
         });
+        this.setupMusicControls();
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.handlePointerDown(pointer));
         this.registerDebugKeys();
         this.setupSettingsControls();
@@ -287,6 +299,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private handlePointerDown(pointer: Phaser.Input.Pointer): void {
+        this.tryStartMusicPlayback();
         if (this.gameOver) {
             return;
         }
@@ -489,6 +502,18 @@ export class GameScene extends Phaser.Scene {
         return savedBaseDifficulty && isBaseVocabDifficulty(savedBaseDifficulty) ? savedBaseDifficulty : 'reception';
     }
 
+    private readSavedMusicVolume(): number {
+        const savedMusicVolume = Number(window.localStorage.getItem(MUSIC_VOLUME_STORAGE_KEY));
+        if (!Number.isFinite(savedMusicVolume)) {
+            return 0.6;
+        }
+        return Phaser.Math.Clamp(savedMusicVolume, 0, 1);
+    }
+
+    private readSavedMusicMuted(): boolean {
+        return window.localStorage.getItem(MUSIC_MUTED_STORAGE_KEY) === 'true';
+    }
+
     private setSpawnRate(spawnRate: GameDifficulty): void {
         this.spawnRate = spawnRate;
         window.localStorage.setItem(SPAWN_RATE_STORAGE_KEY, spawnRate);
@@ -501,6 +526,76 @@ export class GameScene extends Phaser.Scene {
         this.vocabSystem.setEntries(normalizeVocab(ALL_VOCAB, baseDifficulty));
         this.panel.close();
         this.syncSettingsControls();
+    }
+
+    private createBackgroundMusic(): HTMLAudioElement {
+        const audio = new Audio(`${import.meta.env.BASE_URL}${SOUND_PATHS.music}`);
+        audio.loop = true;
+        audio.preload = 'auto';
+        this.applyMusicState(audio);
+        return audio;
+    }
+
+    private setupMusicControls(): void {
+        const muteButton = document.querySelector<HTMLButtonElement>('[data-testid="music-mute-button"]');
+        const volumeSlider = document.querySelector<HTMLInputElement>('[data-testid="music-volume-slider"]');
+        muteButton?.addEventListener('click', () => {
+            this.setMusicMuted(!this.musicMuted);
+            this.tryStartMusicPlayback();
+        });
+        volumeSlider?.addEventListener('input', () => {
+            const nextVolume = Number(volumeSlider.value) / 100;
+            this.setMusicVolume(nextVolume);
+            if (this.musicMuted && nextVolume > 0) {
+                this.setMusicMuted(false);
+            }
+            this.tryStartMusicPlayback();
+        });
+        this.syncMusicControls();
+    }
+
+    private setMusicMuted(muted: boolean): void {
+        this.musicMuted = muted;
+        window.localStorage.setItem(MUSIC_MUTED_STORAGE_KEY, String(muted));
+        this.applyMusicState();
+        this.syncMusicControls();
+    }
+
+    private setMusicVolume(volume: number): void {
+        this.musicVolume = Phaser.Math.Clamp(volume, 0, 1);
+        window.localStorage.setItem(MUSIC_VOLUME_STORAGE_KEY, String(this.musicVolume));
+        this.applyMusicState();
+        this.syncMusicControls();
+    }
+
+    private applyMusicState(audio = this.backgroundMusic): void {
+        if (!audio) {
+            return;
+        }
+        audio.volume = this.musicVolume;
+        audio.muted = this.musicMuted;
+    }
+
+    private tryStartMusicPlayback(): void {
+        if (!this.backgroundMusic || this.musicMuted || !this.backgroundMusic.paused) {
+            return;
+        }
+        void this.backgroundMusic.play().catch(() => undefined);
+    }
+
+    private syncMusicControls(): void {
+        const muteButton = document.querySelector<HTMLButtonElement>('[data-testid="music-mute-button"]');
+        if (muteButton) {
+            const isEffectivelyMuted = this.musicMuted || this.musicVolume <= 0;
+            muteButton.textContent = isEffectivelyMuted ? '🔇' : this.musicVolume < 0.45 ? '🔉' : '🔊';
+            muteButton.setAttribute('aria-label', isEffectivelyMuted ? 'Unmute music' : 'Mute music');
+            muteButton.setAttribute('aria-pressed', String(this.musicMuted));
+            muteButton.title = isEffectivelyMuted ? 'Unmute music' : 'Mute music';
+        }
+        const volumeSlider = document.querySelector<HTMLInputElement>('[data-testid="music-volume-slider"]');
+        if (volumeSlider) {
+            volumeSlider.value = String(Math.round(this.musicVolume * 100));
+        }
     }
 
     private syncStatusMessage(): void {
@@ -949,6 +1044,10 @@ export class GameScene extends Phaser.Scene {
             setSpawnRate: (spawnRate: GameDifficulty) => this.setSpawnRate(spawnRate),
             getBaseDifficulty: () => this.baseDifficulty,
             setBaseDifficulty: (baseDifficulty: BaseVocabDifficulty) => this.setBaseDifficulty(baseDifficulty),
+            getMusicMuted: () => this.musicMuted,
+            setMusicMuted: (muted: boolean) => this.setMusicMuted(muted),
+            getMusicVolume: () => this.musicVolume,
+            setMusicVolume: (volume: number) => this.setMusicVolume(volume),
             getDifficulty: () => this.spawnRate,
             setDifficulty: (difficulty: GameDifficulty) => this.setSpawnRate(difficulty),
             spawnEnemyNearBase: () => this.spawnEnemyNearBase(),

@@ -22,6 +22,10 @@ declare global {
             setSpawnRate: (spawnRate: 'veryEasy' | 'easy' | 'medium' | 'hard' | 'veryHard') => void;
             getBaseDifficulty: () => string;
             setBaseDifficulty: (difficulty: 'reception' | 'year1' | 'year2' | 'year3' | 'year4' | 'year5') => void;
+            getMusicMuted: () => boolean;
+            setMusicMuted: (muted: boolean) => void;
+            getMusicVolume: () => number;
+            setMusicVolume: (volume: number) => void;
             spawnEnemyNearBase: () => void;
         };
     }
@@ -52,6 +56,19 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     await expect(page.locator('[data-stat="base-meter"]')).toBeVisible();
     await expect(page.getByTestId('game-status-message')).toHaveText('Click on a square to place a tower to start game.');
     await expect.poll(() => page.evaluate(() => Boolean(window.vocabAnnihilation))).toBe(true);
+    await expect(page.getByTestId('music-mute-button')).toBeVisible();
+    await expect(page.getByTestId('music-volume-slider')).toBeVisible();
+
+    await page.getByTestId('music-volume-slider').evaluate((element) => {
+        const slider = element as HTMLInputElement;
+        slider.value = '25';
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getMusicVolume())).toBe(0.25);
+    await page.getByTestId('music-mute-button').click();
+    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getMusicMuted())).toBe(true);
+    await page.getByTestId('music-mute-button').click();
+    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getMusicMuted())).toBe(false);
 
     await page.getByTestId('settings-button').click();
     await expect(page.getByTestId('settings-popup')).toBeVisible();

@@ -41,8 +41,14 @@
                     </div>
                 </section>
             </div>
-            <button id="settings-button" class="icon-button settings-button" type="button" aria-label="Settings"
-                aria-expanded="false" aria-controls="settings-popup" data-testid="settings-button">⚙</button>
+            <div id="topbar-controls" aria-label="Game controls">
+                <button id="music-mute-button" class="icon-button music-mute-button" type="button"
+                    aria-label="Mute music" aria-pressed="false" data-testid="music-mute-button">🔊</button>
+                <input id="music-volume-slider" class="music-volume-slider" type="range" min="0" max="100"
+                    step="1" value="60" aria-label="Music volume" data-testid="music-volume-slider" />
+                <button id="settings-button" class="icon-button settings-button" type="button" aria-label="Settings"
+                    aria-expanded="false" aria-controls="settings-popup" data-testid="settings-button">⚙</button>
+            </div>
             <section id="settings-popup" class="settings-popup" hidden aria-label="Settings"
                 data-testid="settings-popup">
                 <h2>Settings</h2>
