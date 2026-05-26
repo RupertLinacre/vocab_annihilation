@@ -30,9 +30,6 @@ describe('vocabulary questions and upgrades', () => {
 
         expect(getUpgradeQuestionDifficulty({ type: 'cluster' }, 2)).toBe('veryHard');
         expect(getUpgradeQuestionDifficulty({ type: 'cluster' }, 8)).toBe('veryHard');
-
-        expect(getUpgradeQuestionDifficulty({ type: 'mine' }, 2)).toBe('veryHard');
-        expect(getUpgradeQuestionDifficulty({ type: 'mine' }, 8)).toBe('veryHard');
     });
 
     it('allows towers to upgrade through level 8', () => {

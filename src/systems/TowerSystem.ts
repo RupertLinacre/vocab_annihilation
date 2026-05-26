@@ -1,4 +1,4 @@
-import type { EnemyState, MapGeometry, ProjectileState, TowerState } from '../types';
+import type { EnemyState, GridPoint, MapGeometry, ProjectileState, TowerState } from '../types';
 import { getTowerStats } from '../pathfinding/ThreatMap';
 import { isWallTower, selectTowerTarget } from '../entities/Tower';
 import { cellCenter, Grid, worldToGrid } from '../map/Grid';
@@ -13,6 +13,13 @@ export interface TowerUpdateResult {
     hurtSounds: number;
     deathSounds: number;
     detonatedTowerIds: number[];
+}
+
+export interface DetonationResult {
+    kills: number;
+    hurtSounds: number;
+    deathSounds: number;
+    explosion: { x: number; y: number; radius: number; lifeMs: number };
 }
 
 function normalize(dx: number, dy: number): { x: number; y: number } {
@@ -72,19 +79,7 @@ export class TowerSystem {
         let hurtSounds = 0;
         let deathSounds = 0;
         for (const tower of towers) {
-            if (isWallTower(tower)) {
-                continue;
-            }
-            if (tower.type === 'mine') {
-                const result = this.tryDetonateMine(tower, enemies, grid, geometry);
-                if (!result) {
-                    continue;
-                }
-                detonatedTowerIds.push(tower.id);
-                explosions.push(result.explosion);
-                kills += result.kills;
-                hurtSounds += result.hurtSounds;
-                deathSounds += result.deathSounds;
+            if (isWallTower(tower) || tower.type === 'airstrike') {
                 continue;
             }
             tower.cooldownMs -= deltaMs;
@@ -138,22 +133,24 @@ export class TowerSystem {
         return { projectiles, shotsFired, kills, explosions, hurtSounds, deathSounds, detonatedTowerIds };
     }
 
-    private tryDetonateMine(
-        tower: TowerState,
+    detonateAirstrike(
+        target: GridPoint,
         enemies: EnemyState[],
         grid: Grid,
         geometry: MapGeometry,
-    ): { kills: number; hurtSounds: number; deathSounds: number; explosion: { x: number; y: number; radius: number; lifeMs: number } } | undefined {
-        const stats = getTowerStats(tower);
-        const center = cellCenter({ x: tower.gridX, y: tower.gridY }, geometry);
-        const triggerRadius = stats.triggerRadius ?? geometry.cellSize * 0.3;
-        const primaryTarget = enemies.find((enemy) => enemy.health > 0 && Math.hypot(enemy.x - center.x, enemy.y - center.y) <= enemy.radius + triggerRadius);
-        if (!primaryTarget) {
-            return undefined;
-        }
-
-        const explosionRadius = stats.explosionRadius ?? stats.range;
+    ): DetonationResult {
+        const stats = getTowerStats({ type: 'airstrike', level: 1 });
+        const center = cellCenter(target, geometry);
+        const mapLeft = geometry.originX;
+        const mapTop = geometry.originY;
+        const mapRight = geometry.originX + grid.cols * geometry.cellSize;
+        const mapBottom = geometry.originY + grid.rows * geometry.cellSize;
+        const explosionRadius = Math.max(
+            stats.explosionRadius ?? 0,
+            Math.hypot(Math.max(center.x - mapLeft, mapRight - center.x), Math.max(center.y - mapTop, mapBottom - center.y)) + geometry.cellSize,
+        );
         const maxKnockback = stats.knockbackDistance ?? 0;
+        const killHalfSize = geometry.cellSize * 1.5;
         let kills = 0;
         let hurtSounds = 0;
         let deathSounds = 0;
@@ -163,32 +160,32 @@ export class TowerSystem {
                 continue;
             }
 
-            const distance = Math.hypot(enemy.x - center.x, enemy.y - center.y);
-            if (distance > explosionRadius + enemy.radius * 0.5) {
-                continue;
-            }
-
-            const normalizedDistance = explosionRadius <= 0 ? 0 : Math.min(1, distance / explosionRadius);
-            const falloff = Math.max(0.18, 1 - normalizedDistance);
-            const damage = enemy.id === primaryTarget.id
+            const enemyCell = worldToGrid({ x: enemy.x, y: enemy.y }, grid, geometry);
+            const isInKillZone = enemyCell
+                ? Math.max(Math.abs(enemyCell.x - target.x), Math.abs(enemyCell.y - target.y)) <= 1
+                : Math.max(Math.abs(enemy.x - center.x), Math.abs(enemy.y - center.y)) <= killHalfSize;
+            const outsideKillBox = Math.max(0, Math.max(Math.abs(enemy.x - center.x), Math.abs(enemy.y - center.y)) - killHalfSize);
+            const normalizedDistance = explosionRadius <= 0 ? 0 : Math.min(1, outsideKillBox / explosionRadius);
+            const falloff = Math.max(0.06, 1 - normalizedDistance);
+            const damage = isInKillZone
                 ? Math.max(enemy.health + enemy.maxHealth, stats.damage)
-                : stats.damage * (0.3 + falloff * 0.7);
+                : Math.min(enemy.health - 1, stats.damage * (0.08 + falloff * falloff * 0.92));
             hurtSounds += 1;
 
-            if (applyDamage(enemy, damage)) {
+            if (damage > 0 && applyDamage(enemy, damage)) {
                 kills += 1;
                 deathSounds += 1;
                 continue;
             }
 
-            applyKnockback(enemy, center.x, center.y, maxKnockback * falloff, grid, geometry);
+            applyKnockback(enemy, center.x, center.y, maxKnockback * (0.08 + falloff * 0.92), grid, geometry);
         }
 
         return {
             kills,
             hurtSounds,
             deathSounds,
-            explosion: { x: center.x, y: center.y, radius: explosionRadius, lifeMs: 260 },
+            explosion: { x: center.x, y: center.y, radius: explosionRadius, lifeMs: 520 },
         };
     }
 }

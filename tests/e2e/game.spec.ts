@@ -11,6 +11,7 @@ declare global {
     interface Window {
         vocabAnnihilation?: {
             getFirstBuildableCell: () => BuildableCell | null;
+            getBaseCell: () => BuildableCell;
             getTowerCount: () => number;
             getTowerTypes: () => string[];
             getEnemyCount: () => number;
@@ -90,12 +91,19 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
 
     await expect(page.getByTestId('panel-row-title')).toHaveText('Select which tower');
     await expect(page.getByTestId('select-hard')).toContainText('Homing missile');
-    await expect(page.getByTestId('select-mine')).toContainText('Mine');
+    await expect(page.getByTestId('select-airstrike')).toContainText('Airstrike');
 
-    for (const [key, testId] of [['1', 'select-easy'], ['2', 'select-medium'], ['3', 'select-hard'], ['4', 'select-veryHard'], ['5', 'select-wall'], ['6', 'select-mine']] as const) {
+    for (const [key, testId] of [['1', 'select-easy'], ['2', 'select-medium'], ['3', 'select-hard'], ['4', 'select-veryHard'], ['5', 'select-wall'], ['6', 'select-airstrike']] as const) {
         await page.keyboard.press(key);
         await expect(page.getByTestId(testId)).toHaveAttribute('aria-pressed', 'true');
     }
+
+    const baseCell = await page.evaluate(() => window.vocabAnnihilation!.getBaseCell());
+    await clickGamePoint(page, baseCell.worldX, baseCell.worldY);
+    await expect(page.getByTestId('build-popup')).toBeVisible();
+    await expect(page.getByTestId('build-popup')).toContainText('Very Hard');
+    await page.getByTestId('answer-popup-close').click();
+    await expect(page.getByTestId('build-popup')).toBeHidden();
 
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('pause-overlay')).toBeVisible();

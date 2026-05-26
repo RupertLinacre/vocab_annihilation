@@ -2,7 +2,7 @@ export type TerrainType = 'tree' | 'grass' | 'tarmac';
 
 export type TowerDifficulty = 'easy' | 'medium' | 'hard' | 'veryHard';
 
-export type TowerType = 'easy' | 'spray' | 'missile' | 'cluster' | 'wall' | 'mine';
+export type TowerType = 'easy' | 'spray' | 'missile' | 'cluster' | 'wall' | 'airstrike';
 
 export type EnemyType = 'scout' | 'grunt' | 'tank';
 

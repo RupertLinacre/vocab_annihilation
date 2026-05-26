@@ -81,7 +81,7 @@ const TOWER_TEXTURES: Record<TowerType, string> = {
     missile: SPRITE_PATHS.towerSidewinder,
     cluster: SPRITE_PATHS.towerClusterBomb,
     wall: SPRITE_PATHS.wall,
-    mine: SPRITE_PATHS.wall,
+    airstrike: SPRITE_PATHS.wall,
 };
 
 const ENEMY_TEXTURES = {
@@ -97,12 +97,13 @@ const BUILD_SHORTCUTS: Record<string, BuildTowerSelection> = {
     '3': 'missile',
     '4': 'cluster',
     '5': 'wall',
-    '6': 'mine',
+    '6': 'airstrike',
 };
 
 const TOWER_SPRITE_MAX_SIZE = GAME_CONFIG.map.cellSize * 1.2;
 const ENEMY_SPRITE_MIN_SIZE = GAME_CONFIG.map.cellSize * 0.9;
 const ENEMY_SPRITE_MAX_SIZE = GAME_CONFIG.map.cellSize * 1.28;
+const AIRSTRIKE_DELAY_MS = 500;
 const LEGACY_DIFFICULTY_STORAGE_KEY = 'vocab-annihilation:difficulty';
 const SPAWN_RATE_STORAGE_KEY = 'vocab-annihilation:spawn-rate';
 const BASE_DIFFICULTY_STORAGE_KEY = 'vocab-annihilation:base-difficulty';
@@ -139,6 +140,15 @@ interface ExplosionVisual {
     lifeMs: number;
 }
 
+interface PendingAirstrike {
+    id: number;
+    target: GridPoint;
+    elapsedMs: number;
+    delayMs: number;
+    start: Vec2;
+    end: Vec2;
+}
+
 export class GameScene extends Phaser.Scene {
     private generatedMap!: GeneratedMap;
     private flowField!: FlowField;
@@ -160,6 +170,7 @@ export class GameScene extends Phaser.Scene {
     private enemies: EnemyState[] = [];
     private projectiles: ProjectileState[] = [];
     private explosions: ExplosionVisual[] = [];
+    private pendingAirstrikes: PendingAirstrike[] = [];
     private baseHealth = GAME_CONFIG.baseHealth;
     private baseDamageFlashMs = 0;
     private spawnRate: GameDifficulty = 'medium';
@@ -172,6 +183,7 @@ export class GameScene extends Phaser.Scene {
     private musicVolume = 0.1;
     private musicMuted = false;
     private nextTowerId = 1;
+    private nextAirstrikeId = 1;
     private selectedCell: GridPoint | undefined;
     private selectedTower: TowerState | undefined;
     private gameOver = false;
@@ -245,6 +257,8 @@ export class GameScene extends Phaser.Scene {
         for (const enemy of this.enemies) {
             enemy.hurtFlashMs = Math.max(0, enemy.hurtFlashMs - deltaMs);
         }
+        this.updateAirstrikes(deltaMs);
+        this.enemies = this.enemies.filter((enemy) => enemy.health > 0);
 
         const enemySurvivors: EnemyState[] = [];
         let baseDamageTaken = 0;
@@ -326,11 +340,12 @@ export class GameScene extends Phaser.Scene {
         }
         const tower = this.findTowerAt(cell.x, cell.y);
         const pointerPosition = this.getPointerClientPosition(pointer);
+        const wantsAirstrike = this.panel.getSelectedBuildTower() === 'airstrike';
         this.selectedCell = cell;
         this.selectedTower = tower;
-        if (tower) {
+        if (tower && !wantsAirstrike) {
             this.panel.openUpgrade(tower, pointerPosition);
-        } else if (this.canBuildOnCell(cell)) {
+        } else if (wantsAirstrike || this.canBuildOnCell(cell)) {
             this.panel.openBuild(cell, pointerPosition);
         } else {
             this.panel.close();
@@ -339,6 +354,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     private buildTower(cell: GridPoint, towerType: TowerType): void {
+        if (towerType === 'airstrike') {
+            this.scheduleAirstrike(cell);
+            this.spawningUnlocked = true;
+            this.syncStatusMessage();
+            return;
+        }
         if (!this.canBuildOnCell(cell) || this.findTowerAt(cell.x, cell.y)) {
             return;
         }
@@ -351,6 +372,46 @@ export class GameScene extends Phaser.Scene {
         this.spawningUnlocked = true;
         this.rebuildFlowField();
         this.syncStatusMessage();
+    }
+
+    private scheduleAirstrike(cell: GridPoint): void {
+        if (!this.generatedMap.grid.inBounds(cell.x, cell.y)) {
+            return;
+        }
+        const center = cellCenter(cell, GAME_CONFIG.map);
+        const { cellSize } = GAME_CONFIG.map;
+        this.pendingAirstrikes.push({
+            id: this.nextAirstrikeId++,
+            target: { ...cell },
+            elapsedMs: 0,
+            delayMs: AIRSTRIKE_DELAY_MS,
+            start: { x: center.x - cellSize * 7, y: center.y - cellSize * 4 },
+            end: { x: center.x + cellSize * 0.25, y: center.y - cellSize * 0.15 },
+        });
+    }
+
+    private updateAirstrikes(deltaMs: number): void {
+        if (this.pendingAirstrikes.length === 0) {
+            return;
+        }
+
+        const active: PendingAirstrike[] = [];
+        for (const airstrike of this.pendingAirstrikes) {
+            airstrike.elapsedMs += deltaMs;
+            if (airstrike.elapsedMs < airstrike.delayMs) {
+                active.push(airstrike);
+                continue;
+            }
+
+            const result = this.towerSystem.detonateAirstrike(airstrike.target, this.enemies, this.generatedMap.grid, GAME_CONFIG.map);
+            this.kills += result.kills;
+            this.explosions.push(result.explosion);
+            this.playRepeatedSound(SOUND_KEYS.pop, 1, 0.24);
+            this.playRepeatedSound(SOUND_KEYS.owHurt, result.hurtSounds, 0.22);
+            this.playRepeatedSound(SOUND_KEYS.owDeath, result.deathSounds, 0.32);
+            this.cameras.main.shake(430, 0.014);
+        }
+        this.pendingAirstrikes = active;
     }
 
     private canBuildOnCell(cell: GridPoint): boolean {
@@ -710,6 +771,7 @@ export class GameScene extends Phaser.Scene {
         this.renderProjectiles();
         this.renderEnemies();
         this.renderExplosions();
+        this.renderAirstrikes();
         this.renderSelection();
         this.renderCostDebug();
     }
@@ -762,7 +824,7 @@ export class GameScene extends Phaser.Scene {
     private renderTowerRanges(): void {
         const towersToShow = this.debug.ranges ? this.towers : this.selectedTower ? [this.selectedTower] : [];
         for (const tower of towersToShow) {
-            if (isWallTower(tower)) {
+            if (isWallTower(tower) || tower.type === 'airstrike') {
                 continue;
             }
             const center = cellCenter({ x: tower.gridX, y: tower.gridY }, GAME_CONFIG.map);
@@ -778,19 +840,11 @@ export class GameScene extends Phaser.Scene {
         for (const tower of this.towers) {
             activeIds.add(tower.id);
             const center = cellCenter({ x: tower.gridX, y: tower.gridY }, GAME_CONFIG.map);
-            if (tower.type === 'mine') {
+            if (tower.type === 'airstrike') {
                 const existingSprite = this.towerSprites.get(tower.id);
                 if (existingSprite) {
                     existingSprite.destroy();
                     this.towerSprites.delete(tower.id);
-                }
-                this.graphics.fillStyle(0x050505, tower === this.selectedTower ? 1 : 0.94);
-                this.graphics.fillCircle(center.x, center.y, cellSize * 0.22);
-                this.graphics.lineStyle(2, 0xf7f0d6, tower === this.selectedTower ? 0.62 : 0.34);
-                this.graphics.strokeCircle(center.x, center.y, cellSize * 0.22);
-                this.graphics.fillStyle(0x101614, 0.9);
-                for (let level = 0; level < tower.level; level += 1) {
-                    this.graphics.fillCircle(center.x - 10 + level * 5, center.y + 18, 2);
                 }
                 continue;
             }
@@ -920,11 +974,41 @@ export class GameScene extends Phaser.Scene {
 
     private renderExplosions(): void {
         for (const explosion of this.explosions) {
-            const alpha = Math.max(0, Math.min(1, explosion.lifeMs / 260));
+            const fullLifeMs = explosion.radius > GAME_CONFIG.map.cellSize * 4 ? 520 : 260;
+            const alpha = Math.max(0, Math.min(1, explosion.lifeMs / fullLifeMs));
             this.graphics.lineStyle(3, 0xffe66d, alpha);
             this.graphics.strokeCircle(explosion.x, explosion.y, explosion.radius * (1.05 - alpha * 0.2));
             this.graphics.fillStyle(0xff9f1c, alpha * 0.16);
             this.graphics.fillCircle(explosion.x, explosion.y, explosion.radius);
+        }
+    }
+
+    private renderAirstrikes(): void {
+        const { cellSize, originX, originY } = GAME_CONFIG.map;
+        for (const airstrike of this.pendingAirstrikes) {
+            const targetCenter = cellCenter(airstrike.target, GAME_CONFIG.map);
+            const progress = Phaser.Math.Clamp(airstrike.elapsedMs / airstrike.delayMs, 0, 1);
+            const planeX = Phaser.Math.Linear(airstrike.start.x, airstrike.end.x, progress);
+            const planeY = Phaser.Math.Linear(airstrike.start.y, airstrike.end.y, progress);
+            const angle = Math.atan2(airstrike.end.y - airstrike.start.y, airstrike.end.x - airstrike.start.x);
+            const targetLeft = originX + airstrike.target.x * cellSize;
+            const targetTop = originY + airstrike.target.y * cellSize;
+
+            this.graphics.lineStyle(2, 0xf7f0d6, 0.86);
+            this.graphics.strokeCircle(targetCenter.x, targetCenter.y, cellSize * 0.34);
+            this.graphics.lineBetween(targetCenter.x - cellSize * 0.46, targetCenter.y, targetCenter.x + cellSize * 0.46, targetCenter.y);
+            this.graphics.lineBetween(targetCenter.x, targetCenter.y - cellSize * 0.46, targetCenter.x, targetCenter.y + cellSize * 0.46);
+            this.graphics.lineStyle(2, 0xffe66d, 0.72);
+            this.graphics.strokeRect(targetLeft + 2, targetTop + 2, cellSize - 4, cellSize - 4);
+
+            this.graphics.save();
+            this.graphics.translateCanvas(planeX, planeY);
+            this.graphics.rotateCanvas(angle);
+            this.graphics.fillStyle(0x101614, 0.96);
+            this.graphics.fillTriangle(cellSize * 0.48, 0, -cellSize * 0.34, -cellSize * 0.26, -cellSize * 0.34, cellSize * 0.26);
+            this.graphics.lineStyle(2, 0xf7f0d6, 0.68);
+            this.graphics.lineBetween(-cellSize * 0.5, 0, -cellSize * 1.05, 0);
+            this.graphics.restore();
         }
     }
 
@@ -933,7 +1017,7 @@ export class GameScene extends Phaser.Scene {
             return;
         }
         const { originX, originY, cellSize } = GAME_CONFIG.map;
-        const blocked = !this.canBuildOnCell(this.selectedCell) && !this.selectedTower;
+        const blocked = this.panel.getSelectedBuildTower() !== 'airstrike' && !this.canBuildOnCell(this.selectedCell) && !this.selectedTower;
         this.graphics.lineStyle(3, blocked ? 0xe85d75 : 0xffe66d, 0.95);
         this.graphics.strokeRect(originX + this.selectedCell.x * cellSize + 2, originY + this.selectedCell.y * cellSize + 2, cellSize - 4, cellSize - 4);
     }
@@ -1065,6 +1149,10 @@ export class GameScene extends Phaser.Scene {
                     }
                 }
                 return null;
+            },
+            getBaseCell: () => {
+                const center = cellCenter(this.generatedMap.base, GAME_CONFIG.map);
+                return { ...this.generatedMap.base, worldX: center.x, worldY: center.y };
             },
             getTowerCount: () => this.towers.length,
             getTowerTypes: () => this.towers.map((tower) => tower.type),

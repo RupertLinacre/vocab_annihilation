@@ -9,16 +9,18 @@ This document describes the intended tower types and upgrade path. The numbers b
 - Answer a `hard` vocab question to build a `Hard Missile Tower`.
 - Answer a `veryHard` vocab question to build a `Very Hard Cluster Tower`.
 - Answer a `veryHard` vocab question to build a `Very Hard Wall`.
+- Answer a `veryHard` vocab question to call a `Very Hard Airstrike` on any map square.
 
 ## Upgrade path
 
-Combat towers start at level 1 and are planned to upgrade through level 8. Walls have no upgrade path.
+Combat towers start at level 1 and are planned to upgrade through level 8. Walls and airstrikes have no upgrade path.
 
 - Easy Bullet Tower upgrade difficulty trajectory: `easy -> easy -> medium -> medium -> hard -> hard -> veryHard`
 - Medium Spray Tower upgrade difficulty trajectory: `medium -> medium -> hard -> hard -> hard -> veryHard -> veryHard`
 - Hard Missile Tower upgrade difficulty trajectory: `hard -> hard -> hard -> veryHard -> veryHard -> veryHard -> veryHard`
 - Very Hard Cluster Tower upgrade difficulty trajectory: `veryHard -> veryHard -> veryHard -> veryHard -> veryHard -> veryHard -> veryHard`
 - Very Hard Wall upgrade difficulty trajectory: none
+- Very Hard Airstrike upgrade difficulty trajectory: none
 
 ## Notes on interpreting the numbers
 
@@ -37,6 +39,7 @@ Combat towers start at level 1 and are planned to upgrade through level 8. Walls
 - Cluster fragments always travel at `260` speed, regardless of tower level.
 - Walls are impassable to monsters and projectiles, matching tree blocking behavior.
 - Walls have `10` health. Enemies that no longer have any path to the base attack walls instead of attacking the base.
+- Airstrikes are one-shot calls. They can target any in-bounds square, detonate after a short flyover delay, kill enemies in the target square and its 8 neighbors, and apply nonlethal damage plus knockback across the rest of the map with distance falloff.
 
 ## Very Hard Wall
 
@@ -45,6 +48,18 @@ Blocking tower. It does not fire and cannot be upgraded.
 - Level 1
 	- Step: Build with `veryHard` question
 	- Health: `10`
+	- Upgrade path: none
+
+## Very Hard Airstrike
+
+One-shot strike. It is called on a target square, detonates after a short flyover, and cannot be upgraded.
+
+- Level 1
+	- Step: Build with `veryHard` question
+	- Targeting: any in-bounds square
+	- Delay: `500 ms`
+	- Central kill zone: target square plus the surrounding `3x3` squares
+	- Outer effect: map-wide nonlethal damage and knockback with distance falloff
 	- Upgrade path: none
 
 ## Easy Bullet Tower

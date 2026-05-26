@@ -4,7 +4,7 @@ import { getTowerStats } from '../pathfinding/ThreatMap';
 import { VocabQuestionSystem } from '../systems/VocabQuestionSystem';
 import type { GridPoint, TowerDifficulty, TowerState, TowerType, Vec2, VocabQuestion } from '../types';
 
-const BUILD_TOWER_TYPES: TowerType[] = ['easy', 'spray', 'missile', 'cluster', 'wall', 'mine'];
+const BUILD_TOWER_TYPES: TowerType[] = ['easy', 'spray', 'missile', 'cluster', 'wall', 'airstrike'];
 const spritePath = (path: string): string => `${import.meta.env.BASE_URL}${path}`;
 const TOWER_SELECTOR_OPTIONS: Record<TowerType, { imagePath?: string; markerClassName?: string; label: string; testId: string }> = {
     easy: { imagePath: spritePath('sprites/turret_basic.png'), label: 'Bullet', testId: 'select-easy' },
@@ -12,7 +12,7 @@ const TOWER_SELECTOR_OPTIONS: Record<TowerType, { imagePath?: string; markerClas
     missile: { imagePath: spritePath('sprites/turret_sidewinder.png'), label: 'Homing missile', testId: 'select-hard' },
     cluster: { imagePath: spritePath('sprites/turrent_cluster_bomb.png'), label: 'Cluster', testId: 'select-veryHard' },
     wall: { imagePath: spritePath('sprites/wall.png'), label: 'Wall', testId: 'select-wall' },
-    mine: { markerClassName: 'tower-selector-marker tower-selector-marker-mine', label: 'Mine', testId: 'select-mine' },
+    airstrike: { markerClassName: 'tower-selector-marker tower-selector-marker-airstrike', label: 'Airstrike', testId: 'select-airstrike' },
 };
 const BUILD_MENU_PADDING = 12;
 const BUILD_MENU_OFFSET = 14;
@@ -98,6 +98,10 @@ export class BottomPanel {
     setSelectedBuildDifficulty(selection: BuildTowerSelection): void {
         this.selectedBuildTower = selection;
         this.renderDifficultySelector();
+    }
+
+    getSelectedBuildTower(): BuildTowerSelection {
+        return this.selectedBuildTower;
     }
 
     private showQuestion(action: PendingAction): void {

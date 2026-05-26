@@ -41,37 +41,41 @@ describe('tower target selection', () => {
         expect(calculateTotalTowerDamagePerSecond([easy, spray, cluster])).toBeCloseTo(13 / 0.66 + 24 + 49 / 1.6);
     });
 
-    it('creates non-upgradable walls with no combat DPS', () => {
+    it('creates non-upgradable utility options with no combat DPS', () => {
         const wall = createTower(1, 1, 1, 'wall');
+        const airstrike = createTower(2, 2, 1, 'airstrike');
 
         expect(wall.health).toBe(GAME_CONFIG.wall.health);
         expect(wall.maxHealth).toBe(GAME_CONFIG.wall.health);
         expect(canUpgradeTower(wall)).toBe(false);
         expect(calculateTowerDamagePerSecond(wall)).toBe(0);
-        expect(calculateTotalTowerDamagePerSecond([wall])).toBe(0);
+        expect(canUpgradeTower(airstrike)).toBe(false);
+        expect(calculateTowerDamagePerSecond(airstrike)).toBe(0);
+        expect(calculateTotalTowerDamagePerSecond([wall, airstrike])).toBe(0);
     });
 
-    it('detonates mines once with primary kill, radial damage, and knockback', () => {
-        const grid = new Grid(8, 5, 'grass');
-        const flow = buildFlowField(grid, { x: 7, y: 2 }, createEmptyCostGrid(grid));
-        const mine = createTower(1, 2, 2, 'mine');
-        const center = cellCenter({ x: mine.gridX, y: mine.gridY }, GAME_CONFIG.map);
-        const primary = createEnemy(1, 'scout', center.x, center.y);
-        const splash = createEnemy(2, 'grunt', center.x + 36, center.y);
-        const outside = createEnemy(3, 'grunt', center.x + 96, center.y);
-        const splashStartX = splash.x;
-        const outsideStartHealth = outside.health;
+    it('detonates airstrikes with a 3x3 kill zone and map-wide falloff knockback', () => {
+        const grid = new Grid(14, 8, 'grass');
+        const target = { x: 3, y: 3 };
+        const center = cellCenter(target, GAME_CONFIG.map);
+        const primary = createEnemy(1, 'tank', center.x, center.y);
+        const corner = createEnemy(2, 'grunt', center.x + GAME_CONFIG.map.cellSize, center.y + GAME_CONFIG.map.cellSize);
+        const near = createEnemy(3, 'tank', center.x + GAME_CONFIG.map.cellSize * 2, center.y);
+        const far = createEnemy(4, 'grunt', center.x + GAME_CONFIG.map.cellSize * 8, center.y);
+        const nearStartX = near.x;
+        const farStartX = far.x;
 
-        const result = new TowerSystem().update(16, [mine], [primary, splash, outside], grid, GAME_CONFIG.map, flow);
+        const result = new TowerSystem().detonateAirstrike(target, [primary, corner, near, far], grid, GAME_CONFIG.map);
 
-        expect(result.detonatedTowerIds).toEqual([mine.id]);
-        expect(result.projectiles).toEqual([]);
-        expect(result.explosions).toHaveLength(1);
-        expect(result.kills).toBe(1);
+        expect(result.kills).toBe(2);
+        expect(result.explosion.radius).toBeGreaterThan(GAME_CONFIG.map.cellSize * 10);
         expect(primary.health).toBeLessThanOrEqual(0);
-        expect(splash.health).toBeLessThan(splash.maxHealth);
-        expect(splash.health).toBeGreaterThan(0);
-        expect(splash.x).toBeGreaterThan(splashStartX);
-        expect(outside.health).toBe(outsideStartHealth);
+        expect(corner.health).toBeLessThanOrEqual(0);
+        expect(near.health).toBe(1);
+        expect(far.health).toBeGreaterThan(0);
+        expect(far.health).toBeLessThan(far.maxHealth);
+        expect(near.health).toBeLessThan(far.health);
+        expect(near.x).toBeGreaterThan(nearStartX);
+        expect(far.x).toBeGreaterThan(farStartX);
     });
 });
