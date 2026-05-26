@@ -167,7 +167,7 @@ export class GameScene extends Phaser.Scene {
     private answered = 0;
     private correctAnswers = 0;
     private backgroundMusic?: HTMLAudioElement;
-    private musicVolume = 0.6;
+    private musicVolume = 0.1;
     private musicMuted = false;
     private nextTowerId = 1;
     private selectedCell: GridPoint | undefined;
@@ -505,7 +505,7 @@ export class GameScene extends Phaser.Scene {
     private readSavedMusicVolume(): number {
         const savedMusicVolume = Number(window.localStorage.getItem(MUSIC_VOLUME_STORAGE_KEY));
         if (!Number.isFinite(savedMusicVolume)) {
-            return 0.6;
+            return 0.1;
         }
         return Phaser.Math.Clamp(savedMusicVolume, 0, 1);
     }
