@@ -69,6 +69,9 @@ describe('tower target selection', () => {
 
         expect(result.kills).toBe(2);
         expect(result.explosion.radius).toBeGreaterThan(GAME_CONFIG.map.cellSize * 10);
+        expect(result.airstrikeImpacts).toHaveLength(grid.cols * grid.rows);
+        expect(result.airstrikeImpacts.find((impact) => impact.x === target.x && impact.y === target.y)?.intensity).toBe(1);
+        expect(result.airstrikeImpacts.find((impact) => impact.x === 0 && impact.y === 0)?.intensity).toBeLessThan(1);
         expect(primary.health).toBeLessThanOrEqual(0);
         expect(corner.health).toBeLessThanOrEqual(0);
         expect(near.health).toBe(1);

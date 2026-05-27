@@ -15,11 +15,18 @@ export interface TowerUpdateResult {
     detonatedTowerIds: number[];
 }
 
+export interface AirstrikeImpactCell {
+    x: number;
+    y: number;
+    intensity: number;
+}
+
 export interface DetonationResult {
     kills: number;
     hurtSounds: number;
     deathSounds: number;
     explosion: { x: number; y: number; radius: number; lifeMs: number };
+    airstrikeImpacts: AirstrikeImpactCell[];
 }
 
 function normalize(dx: number, dy: number): { x: number; y: number } {
@@ -65,6 +72,26 @@ function applyKnockback(enemy: EnemyState, originX: number, originY: number, dis
     enemy.vy *= 0.28;
     enemy.lastProgressDistance = Number.POSITIVE_INFINITY;
     enemy.stalledSeconds = 0;
+}
+
+function clamp(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value));
+}
+
+function calculateAirstrikeFalloff(x: number, y: number, center: { x: number; y: number }, explosionRadius: number, killHalfSize: number): number {
+    const outsideKillBox = Math.max(0, Math.max(Math.abs(x - center.x), Math.abs(y - center.y)) - killHalfSize);
+    const normalizedDistance = explosionRadius <= 0 ? 0 : Math.min(1, outsideKillBox / explosionRadius);
+    return Math.max(0.06, 1 - normalizedDistance);
+}
+
+function calculateAirstrikeIntensity(cell: GridPoint, target: GridPoint, center: { x: number; y: number }, explosionRadius: number, killHalfSize: number, geometry: MapGeometry): number {
+    if (Math.max(Math.abs(cell.x - target.x), Math.abs(cell.y - target.y)) <= 1) {
+        return 1;
+    }
+
+    const cellWorld = cellCenter(cell, geometry);
+    const falloff = calculateAirstrikeFalloff(cellWorld.x, cellWorld.y, center, explosionRadius, killHalfSize);
+    return clamp(0.08 + falloff * falloff * 0.92, 0, 1);
 }
 
 export class TowerSystem {
@@ -154,6 +181,17 @@ export class TowerSystem {
         let kills = 0;
         let hurtSounds = 0;
         let deathSounds = 0;
+        const airstrikeImpacts: AirstrikeImpactCell[] = [];
+
+        for (let y = 0; y < grid.rows; y += 1) {
+            for (let x = 0; x < grid.cols; x += 1) {
+                airstrikeImpacts.push({
+                    x,
+                    y,
+                    intensity: calculateAirstrikeIntensity({ x, y }, target, center, explosionRadius, killHalfSize, geometry),
+                });
+            }
+        }
 
         for (const enemy of enemies) {
             if (enemy.health <= 0) {
@@ -164,9 +202,7 @@ export class TowerSystem {
             const isInKillZone = enemyCell
                 ? Math.max(Math.abs(enemyCell.x - target.x), Math.abs(enemyCell.y - target.y)) <= 1
                 : Math.max(Math.abs(enemy.x - center.x), Math.abs(enemy.y - center.y)) <= killHalfSize;
-            const outsideKillBox = Math.max(0, Math.max(Math.abs(enemy.x - center.x), Math.abs(enemy.y - center.y)) - killHalfSize);
-            const normalizedDistance = explosionRadius <= 0 ? 0 : Math.min(1, outsideKillBox / explosionRadius);
-            const falloff = Math.max(0.06, 1 - normalizedDistance);
+            const falloff = calculateAirstrikeFalloff(enemy.x, enemy.y, center, explosionRadius, killHalfSize);
             const damage = isInKillZone
                 ? Math.max(enemy.health + enemy.maxHealth, stats.damage)
                 : Math.min(enemy.health - 1, stats.damage * (0.08 + falloff * falloff * 0.92));
@@ -186,6 +222,7 @@ export class TowerSystem {
             hurtSounds,
             deathSounds,
             explosion: { x: center.x, y: center.y, radius: explosionRadius, lifeMs: 520 },
+            airstrikeImpacts,
         };
     }
 }
