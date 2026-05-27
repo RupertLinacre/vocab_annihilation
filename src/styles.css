@@ -573,6 +573,20 @@ body {
   text-align: center;
 }
 
+.continue-button {
+  width: 100%;
+}
+
+.icon-button:disabled,
+.choice-button:disabled,
+.primary-button:disabled,
+.difficulty-button:disabled {
+  cursor: not-allowed;
+  color: rgba(247, 240, 214, 0.56);
+  background: rgba(96, 108, 101, 0.45);
+  border-color: rgba(247, 240, 214, 0.14);
+}
+
 .difficulty-button:hover,
 .primary-button:hover,
 .choice-button:hover,

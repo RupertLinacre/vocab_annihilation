@@ -38,6 +38,7 @@ export class BottomPanel {
     private readonly toggleButton = document.querySelector<HTMLButtonElement>('[data-panel-toggle]')!;
     private readonly buildMenu: HTMLElement;
     private closeTimeoutId: number | undefined;
+    private continueCountdownIntervalId: number | undefined;
     private popupAnchor: Vec2 | undefined;
     private currentQuestion: VocabQuestion | undefined;
     private pendingAction: PendingAction | undefined;
@@ -119,9 +120,9 @@ export class BottomPanel {
         }
 
         const correct = choice === this.currentQuestion.correctWord;
-        this.setQuestionActive(false);
         this.callbacks.onAnswered(correct);
         if (correct) {
+            this.setQuestionActive(false);
             this.buildMenu.append(this.createParagraph('feedback good', 'Correct'));
             this.buildMenu.style.pointerEvents = 'none';
             if (this.pendingAction.kind === 'build') {
@@ -135,19 +136,11 @@ export class BottomPanel {
         }
 
         const action = this.pendingAction;
-        this.hideBuildMenu();
-        this.buildMenu.append(this.createParagraph('feedback bad', `Wrong. Correct answer: ${this.currentQuestion.correctWord}.`));
-        const retry = this.createButton('primary-button', 'Try another question', 'retry-question');
-        retry.addEventListener('click', () => this.showQuestion(action));
-        this.buildMenu.append(retry);
-        this.buildMenu.hidden = false;
-        this.buildMenu.classList.add('is-open');
-        if (this.popupAnchor) {
-            this.positionBuildMenu(this.popupAnchor);
-        }
+        this.showIncorrectAnswerPopup(action);
     }
 
     private hideBuildMenu(): void {
+        this.clearContinueCountdown();
         this.buildMenu.classList.remove('is-open');
         this.buildMenu.hidden = true;
         this.buildMenu.innerHTML = '';
@@ -180,6 +173,43 @@ export class BottomPanel {
         });
 
         this.buildMenu.append(header, definition, row);
+        this.buildMenu.hidden = false;
+        this.buildMenu.classList.add('is-open');
+        this.positionBuildMenu(this.popupAnchor);
+    }
+
+    private showIncorrectAnswerPopup(action: PendingAction): void {
+        if (!this.currentQuestion || !this.popupAnchor) {
+            return;
+        }
+
+        const question = this.currentQuestion;
+        this.hideBuildMenu();
+
+        const header = this.createDiv('build-popup-header');
+        const heading = this.createDiv('build-popup-head');
+        heading.append(this.createParagraph('panel-kicker build-popup-kicker', DIFFICULTY_LABELS[question.difficulty]));
+
+        const closeButton = this.createButton('icon-button build-popup-close', '×', 'answer-review-close');
+        closeButton.setAttribute('aria-label', 'Close answer review');
+        closeButton.addEventListener('click', () => this.close());
+        header.append(heading, closeButton);
+
+        const definition = this.createParagraph('definition popup-definition', question.definition);
+        const feedback = this.createParagraph('feedback bad', `Correct answer: ${question.correctWord}`);
+        const continueButton = this.createButton('primary-button continue-button countdown-disabled', '', 'continue-question');
+        continueButton.disabled = true;
+        continueButton.setAttribute('aria-disabled', 'true');
+        continueButton.addEventListener('click', () => {
+            if (continueButton.disabled) {
+                return;
+            }
+            this.showQuestion(action);
+        });
+
+        this.startContinueCountdown(continueButton);
+
+        this.buildMenu.append(header, definition, feedback, continueButton);
         this.buildMenu.hidden = false;
         this.buildMenu.classList.add('is-open');
         this.positionBuildMenu(this.popupAnchor);
@@ -254,6 +284,40 @@ export class BottomPanel {
         }
         window.clearTimeout(this.closeTimeoutId);
         this.closeTimeoutId = undefined;
+    }
+
+    private clearContinueCountdown(): void {
+        if (this.continueCountdownIntervalId === undefined) {
+            return;
+        }
+        window.clearInterval(this.continueCountdownIntervalId);
+        this.continueCountdownIntervalId = undefined;
+    }
+
+    private startContinueCountdown(button: HTMLButtonElement): void {
+        let secondsRemaining = 5;
+        const syncButton = () => {
+            if (secondsRemaining > 0) {
+                button.textContent = `Continue (${secondsRemaining})`;
+                return;
+            }
+
+            button.textContent = 'Continue';
+            button.disabled = false;
+            button.removeAttribute('aria-disabled');
+            button.classList.remove('countdown-disabled');
+            this.clearContinueCountdown();
+        };
+
+        button.disabled = true;
+        button.setAttribute('aria-disabled', 'true');
+        button.classList.add('countdown-disabled');
+        syncButton();
+        this.clearContinueCountdown();
+        this.continueCountdownIntervalId = window.setInterval(() => {
+            secondsRemaining -= 1;
+            syncButton();
+        }, 1000);
     }
 
     private positionBuildMenu(anchor: Vec2): void {
