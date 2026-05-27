@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "optimize:sprites": "node scripts/optimize-sprites.mjs",
+    "prebuild": "npm run optimize:sprites",
     "build": "tsc --noEmit && vite build",
     "predeploy": "pnpm run build",
     "deploy": "node -e \"require('gh-pages').clean()\" && gh-pages -d dist",
@@ -19,6 +21,7 @@
   "devDependencies": {
     "@playwright/test": "latest",
     "gh-pages": "^6.3.0",
+    "sharp": "^0.34.5",
     "typescript": "latest",
     "vitest": "latest"
   }
