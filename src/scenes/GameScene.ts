@@ -12,7 +12,7 @@ import { buildFlowField, type FlowField } from '../pathfinding/FlowField';
 import { calculateTowerThreatCosts, createEmptyCostGrid, type CostGrid, getTowerStats } from '../pathfinding/ThreatMap';
 import { EnemySpawner, isGameDifficulty, type GameDifficulty } from '../systems/EnemySpawner';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
-import { TowerSystem } from '../systems/TowerSystem';
+import { TowerSystem, type AirstrikeImpactCell } from '../systems/TowerSystem';
 import { updateEnemyWallObjective } from '../systems/WallSystem';
 import {
     BASE_VOCAB_DIFFICULTIES,
@@ -104,6 +104,7 @@ const TOWER_SPRITE_MAX_SIZE = GAME_CONFIG.map.cellSize * 1.2;
 const ENEMY_SPRITE_MIN_SIZE = GAME_CONFIG.map.cellSize * 0.9;
 const ENEMY_SPRITE_MAX_SIZE = GAME_CONFIG.map.cellSize * 1.28;
 const AIRSTRIKE_DELAY_MS = 500;
+const AIRSTRIKE_IMPACT_LIFE_MS = 640;
 const LEGACY_DIFFICULTY_STORAGE_KEY = 'vocab-annihilation:difficulty';
 const SPAWN_RATE_STORAGE_KEY = 'vocab-annihilation:spawn-rate';
 const BASE_DIFFICULTY_STORAGE_KEY = 'vocab-annihilation:base-difficulty';
@@ -140,6 +141,11 @@ interface ExplosionVisual {
     lifeMs: number;
 }
 
+interface AirstrikeImpactVisual extends AirstrikeImpactCell {
+    lifeMs: number;
+    seed: number;
+}
+
 interface PendingAirstrike {
     id: number;
     target: GridPoint;
@@ -170,6 +176,7 @@ export class GameScene extends Phaser.Scene {
     private enemies: EnemyState[] = [];
     private projectiles: ProjectileState[] = [];
     private explosions: ExplosionVisual[] = [];
+    private airstrikeImpacts: AirstrikeImpactVisual[] = [];
     private pendingAirstrikes: PendingAirstrike[] = [];
     private baseHealth = GAME_CONFIG.baseHealth;
     private baseDamageFlashMs = 0;
@@ -319,6 +326,9 @@ export class GameScene extends Phaser.Scene {
         this.explosions = this.explosions
             .map((explosion) => ({ ...explosion, lifeMs: explosion.lifeMs - deltaMs }))
             .filter((explosion) => explosion.lifeMs > 0);
+        this.airstrikeImpacts = this.airstrikeImpacts
+            .map((impact) => ({ ...impact, lifeMs: impact.lifeMs - deltaMs }))
+            .filter((impact) => impact.lifeMs > 0);
 
         if (this.baseHealth <= 0) {
             this.endGame();
@@ -406,12 +416,21 @@ export class GameScene extends Phaser.Scene {
             const result = this.towerSystem.detonateAirstrike(airstrike.target, this.enemies, this.generatedMap.grid, GAME_CONFIG.map);
             this.kills += result.kills;
             this.explosions.push(result.explosion);
+            this.airstrikeImpacts.push(...result.airstrikeImpacts.map((impact) => ({
+                ...impact,
+                lifeMs: AIRSTRIKE_IMPACT_LIFE_MS,
+                seed: this.createAirstrikeImpactSeed(airstrike.id, impact),
+            })));
             this.playRepeatedSound(SOUND_KEYS.pop, 1, 0.24);
             this.playRepeatedSound(SOUND_KEYS.owHurt, result.hurtSounds, 0.22);
             this.playRepeatedSound(SOUND_KEYS.owDeath, result.deathSounds, 0.32);
             this.cameras.main.shake(430, 0.014);
         }
         this.pendingAirstrikes = active;
+    }
+
+    private createAirstrikeImpactSeed(airstrikeId: number, impact: AirstrikeImpactCell): number {
+        return ((airstrikeId + 1) * 73856093) ^ ((impact.x + 1) * 19349663) ^ ((impact.y + 1) * 83492791);
     }
 
     private canBuildOnCell(cell: GridPoint): boolean {
@@ -771,6 +790,7 @@ export class GameScene extends Phaser.Scene {
         this.renderProjectiles();
         this.renderEnemies();
         this.renderExplosions();
+        this.renderAirstrikeImpacts();
         this.renderAirstrikes();
         this.renderSelection();
         this.renderCostDebug();
@@ -981,6 +1001,60 @@ export class GameScene extends Phaser.Scene {
             this.graphics.fillStyle(0xff9f1c, alpha * 0.16);
             this.graphics.fillCircle(explosion.x, explosion.y, explosion.radius);
         }
+    }
+
+    private renderAirstrikeImpacts(): void {
+        const { originX, originY, cellSize } = GAME_CONFIG.map;
+        for (const impact of this.airstrikeImpacts) {
+            const life = Phaser.Math.Clamp(impact.lifeMs / AIRSTRIKE_IMPACT_LIFE_MS, 0, 1);
+            const bloom = Math.sin((1 - life) * Math.PI);
+            const intensity = Phaser.Math.Clamp(impact.intensity, 0.08, 1);
+            const left = originX + impact.x * cellSize;
+            const top = originY + impact.y * cellSize;
+            const centerX = left + cellSize * (0.42 + this.seededUnit(impact.seed, 1) * 0.16);
+            const centerY = top + cellSize * (0.42 + this.seededUnit(impact.seed, 2) * 0.16);
+            const radius = cellSize * (0.2 + intensity * 0.32) * (0.82 + bloom * 0.32);
+            const alpha = life * (0.14 + intensity * 0.42);
+
+            this.graphics.fillStyle(0x1d1510, alpha * 0.62);
+            this.graphics.fillRect(left + 1, top + 1, cellSize - 2, cellSize - 2);
+
+            this.graphics.fillStyle(0xfff0a8, alpha * 0.9);
+            this.graphics.fillCircle(centerX, centerY, radius * 0.38);
+            this.graphics.fillStyle(0xff7a1a, alpha * 0.74);
+            this.graphics.fillCircle(centerX, centerY, radius * 0.66);
+
+            const spikes = 5 + Math.floor(intensity * 5);
+            for (let index = 0; index < spikes; index += 1) {
+                const angle = (Math.PI * 2 * index) / spikes + this.seededUnit(impact.seed, index + 10) * 0.8;
+                const halfWidth = 0.17 + this.seededUnit(impact.seed, index + 30) * 0.16;
+                const outer = radius * (0.9 + this.seededUnit(impact.seed, index + 50) * 0.72);
+                const inner = radius * (0.18 + this.seededUnit(impact.seed, index + 70) * 0.12);
+                this.graphics.fillStyle(index % 2 === 0 ? 0xffd166 : 0xff4d00, alpha * (0.52 + intensity * 0.34));
+                this.graphics.fillTriangle(
+                    centerX + Math.cos(angle - halfWidth) * inner,
+                    centerY + Math.sin(angle - halfWidth) * inner,
+                    centerX + Math.cos(angle) * outer,
+                    centerY + Math.sin(angle) * outer,
+                    centerX + Math.cos(angle + halfWidth) * inner,
+                    centerY + Math.sin(angle + halfWidth) * inner,
+                );
+            }
+
+            const smokePuffs = 2 + Math.floor(intensity * 3);
+            for (let index = 0; index < smokePuffs; index += 1) {
+                const angle = this.seededUnit(impact.seed, index + 90) * Math.PI * 2;
+                const distance = radius * (0.28 + this.seededUnit(impact.seed, index + 110) * 0.8) * (1.15 - life * 0.45);
+                const puffRadius = radius * (0.16 + this.seededUnit(impact.seed, index + 130) * 0.2);
+                this.graphics.fillStyle(0x3b332c, life * intensity * 0.36);
+                this.graphics.fillCircle(centerX + Math.cos(angle) * distance, centerY + Math.sin(angle) * distance, puffRadius);
+            }
+        }
+    }
+
+    private seededUnit(seed: number, salt: number): number {
+        const value = Math.sin(seed * 12.9898 + salt * 78.233) * 43758.5453;
+        return value - Math.floor(value);
     }
 
     private renderAirstrikes(): void {
