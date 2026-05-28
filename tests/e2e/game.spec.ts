@@ -66,17 +66,26 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
         slider.dispatchEvent(new Event('input', { bubbles: true }));
     });
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getMusicVolume())).toBe(0.25);
+    await expect.poll(() => new URL(page.url()).searchParams.get('music-volume')).toBe('0.25');
     await page.getByTestId('music-mute-button').click();
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getMusicMuted())).toBe(true);
     await page.getByTestId('music-mute-button').click();
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getMusicMuted())).toBe(false);
+    await expect.poll(() => new URL(page.url()).searchParams.get('music-muted')).toBe('false');
 
     await page.getByTestId('settings-button').click();
     await expect(page.getByTestId('settings-popup')).toBeVisible();
     await page.getByTestId('spawn-rate-select').selectOption('hard');
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getSpawnRate())).toBe('hard');
+    await expect.poll(() => new URL(page.url()).searchParams.get('spawn-rate')).toBe('hard');
     await page.getByTestId('base-difficulty-select').selectOption('year1');
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getBaseDifficulty())).toBe('year1');
+    await expect.poll(() => new URL(page.url()).searchParams.get('base-difficulty')).toBe('year1');
+    await expect(page.getByTestId('include-example-checkbox')).toBeChecked();
+    await page.getByTestId('include-example-checkbox').uncheck();
+    await expect.poll(() => new URL(page.url()).searchParams.get('include-example')).toBe('false');
+    await page.getByTestId('include-example-checkbox').check();
+    await expect.poll(() => new URL(page.url()).searchParams.get('include-example')).toBe('true');
     await page.getByTestId('settings-button').click();
     await expect(page.getByTestId('settings-popup')).toBeHidden();
 
@@ -132,11 +141,16 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     await page.waitForTimeout(150);
     expect(await page.evaluate(() => window.vocabAnnihilation!.getElapsedMs())).toBe(questionPausedElapsedMs);
     await expect(page.locator('[data-testid="build-popup"] .definition')).toBeVisible();
+    await expect(page.locator('[data-testid="build-popup"] .example')).toBeVisible();
     await expect(page.getByText('Pick the word')).toHaveCount(0);
     const definitionText = await page.locator('[data-testid="build-popup"] .definition').textContent();
     const correctAnswer = await page.locator('[data-testid="answer-button"][data-correct="true"]').textContent();
+    const exampleText = await page.locator('[data-testid="build-popup"] .example').textContent();
+    expect(exampleText).toContain('xxxx');
+    expect(exampleText?.toLowerCase()).not.toContain(correctAnswer?.toLowerCase() ?? '');
     await page.locator('[data-testid="answer-button"][data-correct="false"]').first().click();
     await expect(page.getByTestId('build-popup')).toContainText(definitionText ?? '');
+    await expect(page.getByTestId('build-popup')).toContainText(exampleText ?? '');
     await expect(page.getByTestId('build-popup')).toContainText(`Correct answer: ${correctAnswer}`);
     await expect(page.getByTestId('continue-question')).toBeDisabled();
     await expect(page.getByTestId('continue-question')).toHaveText('Continue (5)');

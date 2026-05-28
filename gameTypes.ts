@@ -12,6 +12,7 @@ export type RawVocabDifficulty =
 export interface WordEntry {
     word: string;
     definition: string;
+    example: string;
     difficulty: RawVocabDifficulty;
     synonyms: string[];
     antonyms: string[];

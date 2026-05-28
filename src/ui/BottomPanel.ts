@@ -45,8 +45,10 @@ export class BottomPanel {
     private questionActive = false;
     private selectedBuildTower: BuildTowerSelection = 'easy';
     private panelExpanded = true;
+    private includeExampleInQuestion: boolean;
 
-    constructor(private readonly vocab: VocabQuestionSystem, private readonly callbacks: BottomPanelCallbacks) {
+    constructor(private readonly vocab: VocabQuestionSystem, private readonly callbacks: BottomPanelCallbacks, includeExampleInQuestion = true) {
+        this.includeExampleInQuestion = includeExampleInQuestion;
         this.buildMenu = document.createElement('section');
         this.buildMenu.className = 'build-popup';
         this.buildMenu.dataset.testid = 'build-popup';
@@ -103,6 +105,10 @@ export class BottomPanel {
 
     getSelectedBuildTower(): BuildTowerSelection {
         return this.selectedBuildTower;
+    }
+
+    setIncludeExampleInQuestion(includeExampleInQuestion: boolean): void {
+        this.includeExampleInQuestion = includeExampleInQuestion;
     }
 
     private showQuestion(action: PendingAction): void {
@@ -163,7 +169,7 @@ export class BottomPanel {
         closeButton.addEventListener('click', () => this.close());
         header.append(heading, closeButton);
 
-        const definition = this.createParagraph('definition popup-definition', this.currentQuestion.definition);
+        const questionText = this.createQuestionText(this.currentQuestion);
         const row = this.createDiv('build-popup-actions answer-popup-actions');
         this.currentQuestion.choices.forEach((choice) => {
             const button = this.createButton('choice-button', choice, 'answer-button');
@@ -172,7 +178,7 @@ export class BottomPanel {
             row.append(button);
         });
 
-        this.buildMenu.append(header, definition, row);
+        this.buildMenu.append(header, questionText, row);
         this.buildMenu.hidden = false;
         this.buildMenu.classList.add('is-open');
         this.positionBuildMenu(this.popupAnchor);
@@ -195,7 +201,7 @@ export class BottomPanel {
         closeButton.addEventListener('click', () => this.close());
         header.append(heading, closeButton);
 
-        const definition = this.createParagraph('definition popup-definition', question.definition);
+        const questionText = this.createQuestionText(question);
         const feedback = this.createParagraph('feedback bad', `Correct answer: ${question.correctWord}`);
         const continueButton = this.createButton('primary-button continue-button countdown-disabled', '', 'continue-question');
         continueButton.disabled = true;
@@ -209,7 +215,7 @@ export class BottomPanel {
 
         this.startContinueCountdown(continueButton);
 
-        this.buildMenu.append(header, definition, feedback, continueButton);
+        this.buildMenu.append(header, questionText, feedback, continueButton);
         this.buildMenu.hidden = false;
         this.buildMenu.classList.add('is-open');
         this.positionBuildMenu(this.popupAnchor);
@@ -349,6 +355,15 @@ export class BottomPanel {
         paragraph.className = className;
         paragraph.textContent = text;
         return paragraph;
+    }
+
+    private createQuestionText(question: VocabQuestion): HTMLDivElement {
+        const container = this.createDiv('question-text');
+        container.append(this.createParagraph('definition popup-definition', question.definition));
+        if (this.includeExampleInQuestion) {
+            container.append(this.createParagraph('example popup-example', question.example));
+        }
+        return container;
     }
 
     private createButton(className: string, text: string, testId: string): HTMLButtonElement {

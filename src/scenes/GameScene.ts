@@ -108,8 +108,16 @@ const AIRSTRIKE_IMPACT_LIFE_MS = 640;
 const LEGACY_DIFFICULTY_STORAGE_KEY = 'vocab-annihilation:difficulty';
 const SPAWN_RATE_STORAGE_KEY = 'vocab-annihilation:spawn-rate';
 const BASE_DIFFICULTY_STORAGE_KEY = 'vocab-annihilation:base-difficulty';
+const INCLUDE_EXAMPLE_STORAGE_KEY = 'vocab-annihilation:include-example';
 const MUSIC_VOLUME_STORAGE_KEY = 'vocab-annihilation:music-volume';
 const MUSIC_MUTED_STORAGE_KEY = 'vocab-annihilation:music-muted';
+const URL_OPTION_KEYS = {
+    spawnRate: 'spawn-rate',
+    baseDifficulty: 'base-difficulty',
+    includeExample: 'include-example',
+    musicVolume: 'music-volume',
+    musicMuted: 'music-muted',
+} as const;
 
 const SPAWN_RATE_LABELS: Record<GameDifficulty, string> = {
     veryEasy: 'Very low',
@@ -182,6 +190,7 @@ export class GameScene extends Phaser.Scene {
     private baseDamageFlashMs = 0;
     private spawnRate: GameDifficulty = 'medium';
     private baseDifficulty: BaseVocabDifficulty = 'reception';
+    private includeExampleInQuestion = true;
     private elapsedMs = 0;
     private kills = 0;
     private answered = 0;
@@ -219,8 +228,10 @@ export class GameScene extends Phaser.Scene {
         const seed = seedParam ? SeededRandom.hash(seedParam) : Date.now() % 1000000000;
         this.spawnRate = this.readSavedSpawnRate();
         this.baseDifficulty = this.readSavedBaseDifficulty();
+        this.includeExampleInQuestion = this.readSavedIncludeExampleInQuestion();
         this.musicVolume = this.readSavedMusicVolume();
         this.musicMuted = this.readSavedMusicMuted();
+        this.syncUrlOptions();
         this.backgroundMusic = this.createBackgroundMusic();
         this.generatedMap = generateMap(seed);
         this.rebuildFlowField();
@@ -235,7 +246,7 @@ export class GameScene extends Phaser.Scene {
             onAnswered: (correct) => this.recordAnswer(correct),
             onQuestionStateChange: (isActive) => this.setQuestionPause(isActive),
             onClose: () => this.clearSelection(),
-        });
+        }, this.includeExampleInQuestion);
         this.setupMusicControls();
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.handlePointerDown(pointer));
         this.registerDebugKeys();
@@ -522,6 +533,7 @@ export class GameScene extends Phaser.Scene {
         const popup = document.querySelector<HTMLElement>('[data-testid="settings-popup"]')!;
         const spawnRateSelect = document.querySelector<HTMLSelectElement>('[data-testid="spawn-rate-select"]')!;
         const baseDifficultySelect = document.querySelector<HTMLSelectElement>('[data-testid="base-difficulty-select"]')!;
+        const includeExampleCheckbox = document.querySelector<HTMLInputElement>('[data-testid="include-example-checkbox"]')!;
         const closePopup = () => {
             popup.hidden = true;
             button.setAttribute('aria-expanded', 'false');
@@ -543,6 +555,9 @@ export class GameScene extends Phaser.Scene {
             if (isBaseVocabDifficulty(value)) {
                 this.setBaseDifficulty(value);
             }
+        });
+        includeExampleCheckbox.addEventListener('change', () => {
+            this.setIncludeExampleInQuestion(includeExampleCheckbox.checked);
         });
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
@@ -589,18 +604,36 @@ export class GameScene extends Phaser.Scene {
     }
 
     private readSavedSpawnRate(): GameDifficulty {
-        const savedSpawnRate = window.localStorage.getItem(SPAWN_RATE_STORAGE_KEY)
+        const savedSpawnRate = this.readUrlOption(URL_OPTION_KEYS.spawnRate)
+            ?? window.localStorage.getItem(SPAWN_RATE_STORAGE_KEY)
             ?? window.localStorage.getItem(LEGACY_DIFFICULTY_STORAGE_KEY);
         return savedSpawnRate && isGameDifficulty(savedSpawnRate) ? savedSpawnRate : 'medium';
     }
 
     private readSavedBaseDifficulty(): BaseVocabDifficulty {
-        const savedBaseDifficulty = window.localStorage.getItem(BASE_DIFFICULTY_STORAGE_KEY);
+        const savedBaseDifficulty = this.readUrlOption(URL_OPTION_KEYS.baseDifficulty)
+            ?? window.localStorage.getItem(BASE_DIFFICULTY_STORAGE_KEY);
         return savedBaseDifficulty && isBaseVocabDifficulty(savedBaseDifficulty) ? savedBaseDifficulty : 'reception';
     }
 
+    private readSavedIncludeExampleInQuestion(): boolean {
+        const savedIncludeExample = this.readUrlOption(URL_OPTION_KEYS.includeExample)
+            ?? window.localStorage.getItem(INCLUDE_EXAMPLE_STORAGE_KEY);
+        if (savedIncludeExample === 'true') {
+            return true;
+        }
+        if (savedIncludeExample === 'false') {
+            return false;
+        }
+        return true;
+    }
+
     private readSavedMusicVolume(): number {
-        const savedMusicVolume = Number(window.localStorage.getItem(MUSIC_VOLUME_STORAGE_KEY));
+        const savedMusicVolumeText = this.readUrlOption(URL_OPTION_KEYS.musicVolume) ?? window.localStorage.getItem(MUSIC_VOLUME_STORAGE_KEY);
+        if (savedMusicVolumeText === null) {
+            return 0.1;
+        }
+        const savedMusicVolume = Number(savedMusicVolumeText);
         if (!Number.isFinite(savedMusicVolume)) {
             return 0.1;
         }
@@ -608,13 +641,29 @@ export class GameScene extends Phaser.Scene {
     }
 
     private readSavedMusicMuted(): boolean {
-        return window.localStorage.getItem(MUSIC_MUTED_STORAGE_KEY) === 'true';
+        return (this.readUrlOption(URL_OPTION_KEYS.musicMuted) ?? window.localStorage.getItem(MUSIC_MUTED_STORAGE_KEY)) === 'true';
+    }
+
+    private readUrlOption(key: string): string | null {
+        return new URLSearchParams(window.location.search).get(key);
+    }
+
+    private syncUrlOptions(): void {
+        const params = new URLSearchParams(window.location.search);
+        params.set(URL_OPTION_KEYS.spawnRate, this.spawnRate);
+        params.set(URL_OPTION_KEYS.baseDifficulty, this.baseDifficulty);
+        params.set(URL_OPTION_KEYS.includeExample, String(this.includeExampleInQuestion));
+        params.set(URL_OPTION_KEYS.musicVolume, String(this.musicVolume));
+        params.set(URL_OPTION_KEYS.musicMuted, String(this.musicMuted));
+        const query = params.toString();
+        window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
     }
 
     private setSpawnRate(spawnRate: GameDifficulty): void {
         this.spawnRate = spawnRate;
         window.localStorage.setItem(SPAWN_RATE_STORAGE_KEY, spawnRate);
         this.syncSettingsControls();
+        this.syncUrlOptions();
     }
 
     private setBaseDifficulty(baseDifficulty: BaseVocabDifficulty): void {
@@ -623,6 +672,15 @@ export class GameScene extends Phaser.Scene {
         this.vocabSystem.setEntries(normalizeVocab(ALL_VOCAB, baseDifficulty));
         this.panel.close();
         this.syncSettingsControls();
+        this.syncUrlOptions();
+    }
+
+    private setIncludeExampleInQuestion(includeExampleInQuestion: boolean): void {
+        this.includeExampleInQuestion = includeExampleInQuestion;
+        window.localStorage.setItem(INCLUDE_EXAMPLE_STORAGE_KEY, String(includeExampleInQuestion));
+        this.panel.setIncludeExampleInQuestion(includeExampleInQuestion);
+        this.syncSettingsControls();
+        this.syncUrlOptions();
     }
 
     private createBackgroundMusic(): HTMLAudioElement {
@@ -656,6 +714,7 @@ export class GameScene extends Phaser.Scene {
         window.localStorage.setItem(MUSIC_MUTED_STORAGE_KEY, String(muted));
         this.applyMusicState();
         this.syncMusicControls();
+        this.syncUrlOptions();
     }
 
     private setMusicVolume(volume: number): void {
@@ -663,6 +722,7 @@ export class GameScene extends Phaser.Scene {
         window.localStorage.setItem(MUSIC_VOLUME_STORAGE_KEY, String(this.musicVolume));
         this.applyMusicState();
         this.syncMusicControls();
+        this.syncUrlOptions();
     }
 
     private applyMusicState(audio = this.backgroundMusic): void {
@@ -735,11 +795,15 @@ export class GameScene extends Phaser.Scene {
         if (baseDifficultySelect) {
             baseDifficultySelect.value = this.baseDifficulty;
         }
+        const includeExampleCheckbox = document.querySelector<HTMLInputElement>('[data-testid="include-example-checkbox"]');
+        if (includeExampleCheckbox) {
+            includeExampleCheckbox.checked = this.includeExampleInQuestion;
+        }
         const popup = document.querySelector<HTMLElement>('[data-testid="settings-popup"]');
         if (popup) {
             popup.setAttribute(
                 'aria-label',
-                `Settings, spawn rate ${SPAWN_RATE_LABELS[this.spawnRate]}, base difficulty ${RAW_VOCAB_DIFFICULTY_LABELS[this.baseDifficulty]}`,
+                `Settings, spawn rate ${SPAWN_RATE_LABELS[this.spawnRate]}, base difficulty ${RAW_VOCAB_DIFFICULTY_LABELS[this.baseDifficulty]}, examples ${this.includeExampleInQuestion ? 'on' : 'off'}`,
             );
         }
     }

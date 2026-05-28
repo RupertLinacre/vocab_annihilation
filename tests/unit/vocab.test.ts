@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { SeededRandom } from '../../src/core/SeededRandom';
 import { canUpgradeTower, createTower, getUpgradeQuestionDifficulty, upgradeTower } from '../../src/entities/Tower';
-import { mapRawDifficultyToTowerDifficulty, mapTowerDifficultyToRawDifficulty, normalizeVocab, VocabQuestionSystem } from '../../src/systems/VocabQuestionSystem';
+import { blankWordInExample, mapRawDifficultyToTowerDifficulty, mapTowerDifficultyToRawDifficulty, normalizeVocab, VocabQuestionSystem } from '../../src/systems/VocabQuestionSystem';
 import type { NormalizedVocabEntry } from '../../src/types';
 
 const entries: NormalizedVocabEntry[] = [
-    { word: 'vast', definition: 'very large', difficulty: 'easy' },
-    { word: 'small', definition: 'not large', difficulty: 'easy' },
-    { word: 'rapid', definition: 'fast', difficulty: 'medium' },
-    { word: 'ancient', definition: 'very old', difficulty: 'medium' },
-    { word: 'obscure', definition: 'hard to understand', difficulty: 'hard' },
-    { word: 'quixotic', definition: 'wildly idealistic', difficulty: 'veryHard' },
+    { word: 'vast', definition: 'very large', example: 'The hall was xxxx enough for every class.', difficulty: 'easy' },
+    { word: 'small', definition: 'not large', example: 'The xxxx cup fit in my hand.', difficulty: 'easy' },
+    { word: 'rapid', definition: 'fast', example: 'The river was xxxx after the rain.', difficulty: 'medium' },
+    { word: 'ancient', definition: 'very old', example: 'We saw an xxxx coin in the museum.', difficulty: 'medium' },
+    { word: 'obscure', definition: 'hard to understand', example: 'The xxxx clue made us think carefully.', difficulty: 'hard' },
+    { word: 'quixotic', definition: 'wildly idealistic', example: 'Her xxxx plan was kind but unlikely.', difficulty: 'veryHard' },
 ];
 
 describe('vocabulary questions and upgrades', () => {
@@ -50,6 +50,7 @@ describe('vocabulary questions and upgrades', () => {
         expect(question.choices).toHaveLength(3);
         expect(new Set(question.choices).size).toBe(3);
         expect(question.choices).toContain(question.correctWord);
+        expect(question.example).toContain('xxxx');
     });
 
     it('avoids immediately repeating a question when alternatives exist', () => {
@@ -73,26 +74,30 @@ describe('vocabulary questions and upgrades', () => {
 
     it('normalizes raw vocab against the chosen base difficulty', () => {
         const normalized = normalizeVocab([
-            { word: 'alpha', definition: 'first', difficulty: 'year1', synonyms: [], antonyms: [] },
-            { word: 'beta', definition: 'second', difficulty: 'year2', synonyms: [], antonyms: [] },
-            { word: 'gamma', definition: 'third', difficulty: 'year4', synonyms: [], antonyms: [] },
-            { word: 'delta', definition: 'fourth', difficulty: 'year6PlusPlus', synonyms: [], antonyms: [] },
+            { word: 'alpha', definition: 'first', example: 'The alpha team lined up first.', difficulty: 'year1', synonyms: [], antonyms: [] },
+            { word: 'beta', definition: 'second', example: 'The beta card came next.', difficulty: 'year2', synonyms: [], antonyms: [] },
+            { word: 'gamma', definition: 'third', example: 'The gamma label was on the third box.', difficulty: 'year4', synonyms: [], antonyms: [] },
+            { word: 'delta', definition: 'fourth', example: 'The delta kite flew over the field.', difficulty: 'year6PlusPlus', synonyms: [], antonyms: [] },
         ], 'year1');
 
         expect(normalized.map((entry) => entry.difficulty)).toEqual(['easy', 'medium', 'veryHard', 'veryHard']);
+        expect(normalized[0].example).toBe('The xxxx team lined up first.');
         expect(mapRawDifficultyToTowerDifficulty('reception', 'year1')).toBe('easy');
         expect(mapRawDifficultyToTowerDifficulty('year2', 'year1')).toBe('medium');
         expect(mapRawDifficultyToTowerDifficulty('year3', 'year1')).toBe('hard');
         expect(mapRawDifficultyToTowerDifficulty('year4', 'year1')).toBe('veryHard');
     });
 
-    it('prefers simple wiktionary definitions when available and falls back otherwise', () => {
+    it('uses source definitions and masks whole-word examples', () => {
         const normalized = normalizeVocab([
-            { word: 'after', definition: 'custom after definition', difficulty: 'reception', synonyms: [], antonyms: [] },
-            { word: 'slither', definition: 'custom slither definition', difficulty: 'year3', synonyms: [], antonyms: [] },
+            { word: 'after', definition: 'custom after definition', example: 'We played after lunch.', difficulty: 'reception', synonyms: [], antonyms: [] },
+            { word: 'slither', definition: 'custom slither definition', example: 'The snail will slither along the path.', difficulty: 'year3', synonyms: [], antonyms: [] },
         ]);
 
-        expect(normalized[0].definition).toBe('Later in time.');
+        expect(normalized[0].definition).toBe('custom after definition');
+        expect(normalized[0].example).toBe('We played xxxx lunch.');
         expect(normalized[1].definition).toBe('custom slither definition');
+        expect(normalized[1].example).toBe('The snail will xxxx along the path.');
+        expect(blankWordInExample('The goodness chart was good.', 'good')).toBe('The goodness chart was xxxx.');
     });
 });

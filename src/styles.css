@@ -260,6 +260,18 @@ body {
   gap: 6px;
 }
 
+.settings-checkbox-field {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.settings-checkbox-field input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--amber);
+  cursor: pointer;
+}
+
 .settings-field + .settings-field {
   margin-top: 12px;
 }
@@ -402,6 +414,18 @@ body {
 .popup-definition {
   max-width: none;
   font-size: 18px;
+}
+
+.question-text {
+  display: grid;
+  gap: 8px;
+}
+
+.popup-example {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.35;
 }
 
 @keyframes build-popup-enter {

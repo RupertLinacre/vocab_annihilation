@@ -4,14 +4,19 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:vocab": "node scripts/build-vocab.mjs",
+    "predev": "npm run build:vocab",
     "dev": "vite --host 0.0.0.0",
     "optimize:sprites": "node scripts/optimize-sprites.mjs",
-    "prebuild": "npm run optimize:sprites",
+    "prebuild": "npm run build:vocab && npm run optimize:sprites",
     "build": "tsc --noEmit && vite build",
+    "pretypecheck": "npm run build:vocab",
     "predeploy": "pnpm run build",
     "deploy": "node -e \"require('gh-pages').clean()\" && gh-pages -d dist",
     "typecheck": "tsc --noEmit",
+    "pretest": "npm run build:vocab",
     "test": "vitest run",
+    "pretest:e2e": "npm run build:vocab",
     "test:e2e": "playwright test"
   },
   "dependencies": {

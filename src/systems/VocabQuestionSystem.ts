@@ -1,5 +1,4 @@
 import type { RawVocabDifficulty, WordEntry } from '../../gameTypes';
-import { SIMPLE_WIKTIONARY_DEFINITIONS } from '../../simpleWiktionaryDefinitions';
 import { ALL_VOCAB } from '../../vocab';
 import { SeededRandom } from '../core/SeededRandom';
 import type { NormalizedVocabEntry, TowerDifficulty, VocabQuestion } from '../types';
@@ -66,9 +65,19 @@ export function normalizeVocab(
 ): NormalizedVocabEntry[] {
     return entries.map((entry) => ({
         word: entry.word,
-        definition: SIMPLE_WIKTIONARY_DEFINITIONS[entry.word.toLowerCase()] ?? entry.definition,
+        definition: entry.definition,
+        example: blankWordInExample(entry.example, entry.word),
         difficulty: mapRawDifficultyToTowerDifficulty(entry.difficulty, baseDifficulty),
     }));
+}
+
+function escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function blankWordInExample(example: string, word: string): string {
+    const pattern = new RegExp(`\\b${escapeRegExp(word)}\\b`, 'gi');
+    return example.replace(pattern, 'xxxx');
 }
 
 function adjacentDifficulties(difficulty: TowerDifficulty): TowerDifficulty[] {
@@ -106,6 +115,7 @@ export class VocabQuestionSystem {
             id: `${difficulty}:${correct.word}:${Math.floor(this.rng.next() * 1000000)}`,
             difficulty,
             definition: correct.definition,
+            example: correct.example,
             correctWord: correct.word,
             choices,
         };

@@ -80,6 +80,7 @@ export interface ProjectileState {
 export interface NormalizedVocabEntry {
     word: string;
     definition: string;
+    example: string;
     difficulty: TowerDifficulty;
 }
 
@@ -87,6 +88,7 @@ export interface VocabQuestion {
     id: string;
     difficulty: TowerDifficulty;
     definition: string;
+    example: string;
     correctWord: string;
     choices: string[];
 }
