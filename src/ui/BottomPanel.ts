@@ -200,7 +200,8 @@ export class BottomPanel {
         header.append(heading, closeButton);
 
         const questionText = this.createQuestionText(question);
-        const feedback = this.createParagraph('feedback bad', `Correct answer: ${question.correctWord}`);
+        const reviewBlankFills = Array.from(questionText.querySelectorAll<HTMLElement>('.example-blank-fill'));
+        const feedback = this.createParagraph('feedback answer-review-answer', `Correct answer: ${question.correctWord}`);
         const instruction = this.createParagraph('meta-line answer-review-prompt', 'Type the correct answer to continue.');
         const answerInput = document.createElement('input');
         answerInput.type = 'text';
@@ -215,6 +216,12 @@ export class BottomPanel {
             if (!this.currentQuestion) {
                 return;
             }
+
+            const revealedText = this.formatAnswerPreview(answerInput.value);
+            reviewBlankFills.forEach((blankFill) => {
+                blankFill.textContent = revealedText;
+                blankFill.classList.toggle('is-filled', revealedText.length > 0);
+            });
 
             if (this.normalizeAnswerInput(answerInput.value) !== this.normalizeAnswerInput(this.currentQuestion.correctWord)) {
                 return;
@@ -305,6 +312,10 @@ export class BottomPanel {
         return value.toLowerCase().replace(/[\W_]+/g, '');
     }
 
+    private formatAnswerPreview(value: string): string {
+        return value.replace(/[^\p{L}\p{N}'-]+/gu, ' ').trim();
+    }
+
     private positionBuildMenu(anchor: Vec2): void {
         const frameBounds = this.frame.getBoundingClientRect();
         const menuBounds = this.buildMenu.getBoundingClientRect();
@@ -369,6 +380,9 @@ export class BottomPanel {
         blank.className = 'example-blank';
         blank.style.setProperty('--blank-width', `${Math.max(word.length, 3)}ch`);
         blank.setAttribute('aria-hidden', 'true');
+        const fill = document.createElement('span');
+        fill.className = 'example-blank-fill';
+        blank.append(fill);
         return blank;
     }
 

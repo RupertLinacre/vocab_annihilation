@@ -454,6 +454,7 @@ body {
 }
 
 .example-blank {
+  position: relative;
   display: inline-block;
   width: var(--blank-width, 4ch);
   min-width: 2.5ch;
@@ -464,6 +465,23 @@ body {
   border-radius: 0.25em 0.25em 0.1em 0.1em;
   background: linear-gradient(180deg, rgba(243, 182, 75, 0.16), rgba(243, 182, 75, 0.03));
   box-shadow: inset 0 -1px 0 rgba(255, 249, 230, 0.12);
+}
+
+.example-blank-fill {
+  position: absolute;
+  left: 0.18em;
+  right: 0.18em;
+  bottom: 0.1em;
+  overflow: hidden;
+  color: #fff9e6;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0;
+  text-overflow: clip;
+}
+
+.example-blank-fill.is-filled {
+  opacity: 1;
 }
 
 @keyframes build-popup-enter {
@@ -686,6 +704,10 @@ body {
 
 .feedback.bad {
   color: var(--red);
+}
+
+.feedback.answer-review-answer {
+  color: var(--amber);
 }
 
 .game-over,
