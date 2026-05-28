@@ -25,6 +25,31 @@ body,
 }
 
 body {
+.answer-review-prompt {
+  margin-top: 4px;
+}
+.answer-review-input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgba(243, 182, 75, 0.42);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--ink);
+  background: rgba(247, 240, 214, 0.08);
+  font: inherit;
+  letter-spacing: 0.01em;
+}
+
+.answer-review-input::placeholder {
+  color: rgba(247, 240, 214, 0.42);
+}
+
+.answer-review-input:focus {
+  outline: 2px solid rgba(243, 182, 75, 0.48);
+  outline-offset: 1px;
+  border-color: rgba(243, 182, 75, 0.72);
+  background: rgba(247, 240, 214, 0.12);
+}
   overflow: hidden;
   color: var(--ink);
   background:

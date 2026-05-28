@@ -38,7 +38,6 @@ export class BottomPanel {
     private readonly toggleButton = document.querySelector<HTMLButtonElement>('[data-panel-toggle]')!;
     private readonly buildMenu: HTMLElement;
     private closeTimeoutId: number | undefined;
-    private continueCountdownIntervalId: number | undefined;
     private popupAnchor: Vec2 | undefined;
     private currentQuestion: VocabQuestion | undefined;
     private pendingAction: PendingAction | undefined;
@@ -146,7 +145,6 @@ export class BottomPanel {
     }
 
     private hideBuildMenu(): void {
-        this.clearContinueCountdown();
         this.buildMenu.classList.remove('is-open');
         this.buildMenu.hidden = true;
         this.buildMenu.innerHTML = '';
@@ -203,22 +201,33 @@ export class BottomPanel {
 
         const questionText = this.createQuestionText(question);
         const feedback = this.createParagraph('feedback bad', `Correct answer: ${question.correctWord}`);
-        const continueButton = this.createButton('primary-button continue-button countdown-disabled', '', 'continue-question');
-        continueButton.disabled = true;
-        continueButton.setAttribute('aria-disabled', 'true');
-        continueButton.addEventListener('click', () => {
-            if (continueButton.disabled) {
+        const instruction = this.createParagraph('meta-line answer-review-prompt', 'Type the correct answer to continue.');
+        const answerInput = document.createElement('input');
+        answerInput.type = 'text';
+        answerInput.className = 'answer-review-input';
+        answerInput.dataset.testid = 'answer-review-input';
+        answerInput.setAttribute('aria-label', 'Type the correct answer');
+        answerInput.setAttribute('autocomplete', 'off');
+        answerInput.setAttribute('autocapitalize', 'off');
+        answerInput.setAttribute('autocorrect', 'off');
+        answerInput.setAttribute('spellcheck', 'false');
+        answerInput.addEventListener('input', () => {
+            if (!this.currentQuestion) {
                 return;
             }
+
+            if (this.normalizeAnswerInput(answerInput.value) !== this.normalizeAnswerInput(this.currentQuestion.correctWord)) {
+                return;
+            }
+
             this.showQuestion(action);
         });
 
-        this.startContinueCountdown(continueButton);
-
-        this.buildMenu.append(header, questionText, feedback, continueButton);
+        this.buildMenu.append(header, questionText, feedback, instruction, answerInput);
         this.buildMenu.hidden = false;
         this.buildMenu.classList.add('is-open');
         this.positionBuildMenu(this.popupAnchor);
+        answerInput.focus();
     }
 
     private showMessagePopup(kicker: string, titleText: string, detail: string, message: string): void {
@@ -292,38 +301,8 @@ export class BottomPanel {
         this.closeTimeoutId = undefined;
     }
 
-    private clearContinueCountdown(): void {
-        if (this.continueCountdownIntervalId === undefined) {
-            return;
-        }
-        window.clearInterval(this.continueCountdownIntervalId);
-        this.continueCountdownIntervalId = undefined;
-    }
-
-    private startContinueCountdown(button: HTMLButtonElement): void {
-        let secondsRemaining = 5;
-        const syncButton = () => {
-            if (secondsRemaining > 0) {
-                button.textContent = `Continue (${secondsRemaining})`;
-                return;
-            }
-
-            button.textContent = 'Continue';
-            button.disabled = false;
-            button.removeAttribute('aria-disabled');
-            button.classList.remove('countdown-disabled');
-            this.clearContinueCountdown();
-        };
-
-        button.disabled = true;
-        button.setAttribute('aria-disabled', 'true');
-        button.classList.add('countdown-disabled');
-        syncButton();
-        this.clearContinueCountdown();
-        this.continueCountdownIntervalId = window.setInterval(() => {
-            secondsRemaining -= 1;
-            syncButton();
-        }, 1000);
+    private normalizeAnswerInput(value: string): string {
+        return value.toLowerCase().replace(/[\W_]+/g, '');
     }
 
     private positionBuildMenu(anchor: Vec2): void {

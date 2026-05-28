@@ -155,14 +155,13 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     await expect(page.getByTestId('build-popup')).toContainText(definitionText ?? '');
     await expect(page.getByTestId('build-popup')).toContainText(exampleText ?? '');
     await expect(page.getByTestId('build-popup')).toContainText(`Correct answer: ${correctAnswer}`);
-    await expect(page.getByTestId('continue-question')).toBeDisabled();
-    await expect(page.getByTestId('continue-question')).toHaveText('Continue (5)');
+    const answerReviewInput = page.getByTestId('answer-review-input');
+    await expect(answerReviewInput).toBeVisible();
+    await expect(answerReviewInput).toBeFocused();
     const reviewPausedElapsedMs = await page.evaluate(() => window.vocabAnnihilation!.getElapsedMs());
     await page.waitForTimeout(150);
     expect(await page.evaluate(() => window.vocabAnnihilation!.getElapsedMs())).toBe(reviewPausedElapsedMs);
-    await expect(page.getByTestId('continue-question')).toHaveText('Continue', { timeout: 6500 });
-    await expect(page.getByTestId('continue-question')).toBeEnabled();
-    await page.getByTestId('continue-question').click();
+    await answerReviewInput.fill(`  ${correctAnswer}!! `);
     await expect(page.locator('[data-testid="answer-button"]')).toHaveCount(3);
     await page.locator('[data-testid="answer-button"][data-correct="true"]').click();
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.isPaused())).toBe(false);
