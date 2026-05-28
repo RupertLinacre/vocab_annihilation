@@ -1,7 +1,7 @@
 import { DIFFICULTY_LABELS, TOWER_BUILD_DIFFICULTIES, TOWER_LABELS } from '../config/gameConfig';
 import { canUpgradeTower, getUpgradeQuestionDifficulty } from '../entities/Tower';
 import { getTowerStats } from '../pathfinding/ThreatMap';
-import { VocabQuestionSystem } from '../systems/VocabQuestionSystem';
+import { createWholeWordPattern, VocabQuestionSystem } from '../systems/VocabQuestionSystem';
 import type { GridPoint, TowerDifficulty, TowerState, TowerType, Vec2, VocabQuestion } from '../types';
 
 const BUILD_TOWER_TYPES: TowerType[] = ['easy', 'spray', 'missile', 'cluster', 'wall', 'airstrike'];
@@ -361,9 +361,36 @@ export class BottomPanel {
         const container = this.createDiv('question-text');
         container.append(this.createParagraph('definition popup-definition', question.definition));
         if (this.includeExampleInQuestion) {
-            container.append(this.createParagraph('example popup-example', question.example));
+            container.append(this.createExampleParagraph(question));
         }
         return container;
+    }
+
+    private createExampleParagraph(question: VocabQuestion): HTMLParagraphElement {
+        const paragraph = document.createElement('p');
+        paragraph.className = 'example popup-example';
+
+        const parts = question.example.split(createWholeWordPattern(question.correctWord));
+        const matches = question.example.match(createWholeWordPattern(question.correctWord)) ?? [];
+
+        parts.forEach((part, index) => {
+            if (part.length > 0) {
+                paragraph.append(document.createTextNode(part));
+            }
+            if (index < matches.length) {
+                paragraph.append(this.createExampleBlank(matches[index]));
+            }
+        });
+
+        return paragraph;
+    }
+
+    private createExampleBlank(word: string): HTMLSpanElement {
+        const blank = document.createElement('span');
+        blank.className = 'example-blank';
+        blank.style.setProperty('--blank-width', `${Math.max(word.length, 3)}ch`);
+        blank.setAttribute('aria-hidden', 'true');
+        return blank;
     }
 
     private createButton(className: string, text: string, testId: string): HTMLButtonElement {

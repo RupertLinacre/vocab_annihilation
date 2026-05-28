@@ -144,11 +144,12 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     expect(await page.evaluate(() => window.vocabAnnihilation!.getElapsedMs())).toBe(questionPausedElapsedMs);
     await expect(page.locator('[data-testid="build-popup"] .definition')).toBeVisible();
     await expect(page.locator('[data-testid="build-popup"] .example')).toBeVisible();
+    await expect(page.locator('[data-testid="build-popup"] .example-blank')).toHaveCount(1);
     await expect(page.getByText('Pick the word')).toHaveCount(0);
     const definitionText = await page.locator('[data-testid="build-popup"] .definition').textContent();
     const correctAnswer = await page.locator('[data-testid="answer-button"][data-correct="true"]').textContent();
     const exampleText = await page.locator('[data-testid="build-popup"] .example').textContent();
-    expect(exampleText).toContain('xxxx');
+    expect(exampleText).not.toContain('xxxx');
     expect(exampleText?.toLowerCase()).not.toContain(correctAnswer?.toLowerCase() ?? '');
     await page.locator('[data-testid="answer-button"][data-correct="false"]').first().click();
     await expect(page.getByTestId('build-popup')).toContainText(definitionText ?? '');

@@ -5,12 +5,12 @@ import { blankWordInExample, mapRawDifficultyToTowerDifficulty, mapTowerDifficul
 import type { NormalizedVocabEntry } from '../../src/types';
 
 const entries: NormalizedVocabEntry[] = [
-    { word: 'vast', definition: 'very large', example: 'The hall was xxxx enough for every class.', difficulty: 'easy' },
-    { word: 'small', definition: 'not large', example: 'The xxxx cup fit in my hand.', difficulty: 'easy' },
-    { word: 'rapid', definition: 'fast', example: 'The river was xxxx after the rain.', difficulty: 'medium' },
-    { word: 'ancient', definition: 'very old', example: 'We saw an xxxx coin in the museum.', difficulty: 'medium' },
-    { word: 'obscure', definition: 'hard to understand', example: 'The xxxx clue made us think carefully.', difficulty: 'hard' },
-    { word: 'quixotic', definition: 'wildly idealistic', example: 'Her xxxx plan was kind but unlikely.', difficulty: 'veryHard' },
+    { word: 'vast', definition: 'very large', example: 'The hall was vast enough for every class.', difficulty: 'easy' },
+    { word: 'small', definition: 'not large', example: 'The small cup fit in my hand.', difficulty: 'easy' },
+    { word: 'rapid', definition: 'fast', example: 'The river was rapid after the rain.', difficulty: 'medium' },
+    { word: 'ancient', definition: 'very old', example: 'We saw an ancient coin in the museum.', difficulty: 'medium' },
+    { word: 'obscure', definition: 'hard to understand', example: 'The obscure clue made us think carefully.', difficulty: 'hard' },
+    { word: 'quixotic', definition: 'wildly idealistic', example: 'Her quixotic plan was kind but unlikely.', difficulty: 'veryHard' },
 ];
 
 describe('vocabulary questions and upgrades', () => {
@@ -50,7 +50,7 @@ describe('vocabulary questions and upgrades', () => {
         expect(question.choices).toHaveLength(3);
         expect(new Set(question.choices).size).toBe(3);
         expect(question.choices).toContain(question.correctWord);
-        expect(question.example).toContain('xxxx');
+        expect(question.example).toContain(question.correctWord);
     });
 
     it('avoids immediately repeating a question when alternatives exist', () => {
@@ -81,7 +81,7 @@ describe('vocabulary questions and upgrades', () => {
         ], 'year1');
 
         expect(normalized.map((entry) => entry.difficulty)).toEqual(['easy', 'medium', 'veryHard', 'veryHard']);
-        expect(normalized[0].example).toBe('The xxxx team lined up first.');
+        expect(normalized[0].example).toBe('The alpha team lined up first.');
         expect(mapRawDifficultyToTowerDifficulty('reception', 'year1')).toBe('easy');
         expect(mapRawDifficultyToTowerDifficulty('year2', 'year1')).toBe('medium');
         expect(mapRawDifficultyToTowerDifficulty('year3', 'year1')).toBe('hard');
@@ -95,9 +95,9 @@ describe('vocabulary questions and upgrades', () => {
         ]);
 
         expect(normalized[0].definition).toBe('custom after definition');
-        expect(normalized[0].example).toBe('We played xxxx lunch.');
+        expect(normalized[0].example).toBe('We played after lunch.');
         expect(normalized[1].definition).toBe('custom slither definition');
-        expect(normalized[1].example).toBe('The snail will xxxx along the path.');
+        expect(normalized[1].example).toBe('The snail will slither along the path.');
         expect(blankWordInExample('The goodness chart was good.', 'good')).toBe('The goodness chart was xxxx.');
     });
 });

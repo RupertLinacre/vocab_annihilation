@@ -66,7 +66,7 @@ export function normalizeVocab(
     return entries.map((entry) => ({
         word: entry.word,
         definition: entry.definition,
-        example: blankWordInExample(entry.example, entry.word),
+        example: entry.example,
         difficulty: mapRawDifficultyToTowerDifficulty(entry.difficulty, baseDifficulty),
     }));
 }
@@ -75,9 +75,12 @@ function escapeRegExp(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+export function createWholeWordPattern(word: string): RegExp {
+    return new RegExp(`\\b${escapeRegExp(word)}\\b`, 'gi');
+}
+
 export function blankWordInExample(example: string, word: string): string {
-    const pattern = new RegExp(`\\b${escapeRegExp(word)}\\b`, 'gi');
-    return example.replace(pattern, 'xxxx');
+    return example.replace(createWholeWordPattern(word), 'xxxx');
 }
 
 function adjacentDifficulties(difficulty: TowerDifficulty): TowerDifficulty[] {
