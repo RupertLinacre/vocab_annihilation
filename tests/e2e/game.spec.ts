@@ -57,6 +57,8 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     await expect(page.locator('[data-stat="base-meter"]')).toBeVisible();
     await expect(page.getByTestId('game-status-message')).toHaveText('Click on a square to place a tower to start game.');
     await expect.poll(() => page.evaluate(() => Boolean(window.vocabAnnihilation))).toBe(true);
+    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getBaseDifficulty())).toBe('year2');
+    await expect.poll(() => new URL(page.url()).searchParams.get('base-difficulty')).toBe('year2');
     await expect(page.getByTestId('music-mute-button')).toBeVisible();
     await expect(page.getByTestId('music-volume-slider')).toBeVisible();
 
