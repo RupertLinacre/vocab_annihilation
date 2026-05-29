@@ -1,6 +1,6 @@
 import { createProjectile } from '../entities/Projectile';
-import { segmentCrossesTree } from '../map/LineOfSight';
-import type { EnemyState, MapGeometry, ProjectileState } from '../types';
+import { raycastGridCells } from '../map/LineOfSight';
+import type { EnemyState, GridPoint, MapGeometry, ProjectileState, Vec2 } from '../types';
 import { Grid } from '../map/Grid';
 
 export interface ProjectileUpdateResult {
@@ -21,6 +21,88 @@ function applyDamage(enemy: EnemyState, damage: number): boolean {
     enemy.health -= damage;
     enemy.hurtFlashMs = 120;
     return wasAlive && enemy.health <= 0;
+}
+
+interface TreeCollision {
+    hitX: number;
+    hitY: number;
+    normalX: number;
+    normalY: number;
+}
+
+const TREE_BOUNCE_OFFSET = 0.5;
+
+function isTreeBounceable(projectile: ProjectileState): boolean {
+    return projectile.type === 'bullet' || projectile.type === 'fragment';
+}
+
+function clampUnit(value: number): number {
+    return Math.max(0, Math.min(1, value));
+}
+
+function collisionTime(from: Vec2, to: Vec2, cell: GridPoint, normalX: number, normalY: number, geometry: MapGeometry): number {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const candidates: number[] = [];
+
+    if (normalX !== 0 && dx !== 0) {
+        const boundaryX = normalX < 0
+            ? geometry.originX + cell.x * geometry.cellSize
+            : geometry.originX + (cell.x + 1) * geometry.cellSize;
+        candidates.push((boundaryX - from.x) / dx);
+    }
+    if (normalY !== 0 && dy !== 0) {
+        const boundaryY = normalY < 0
+            ? geometry.originY + cell.y * geometry.cellSize
+            : geometry.originY + (cell.y + 1) * geometry.cellSize;
+        candidates.push((boundaryY - from.y) / dy);
+    }
+
+    const validCandidates = candidates.filter((candidate) => Number.isFinite(candidate));
+    return validCandidates.length > 0 ? clampUnit(Math.min(...validCandidates)) : 0;
+}
+
+function findFirstTreeCollision(grid: Grid, from: Vec2, to: Vec2, geometry: MapGeometry): TreeCollision | undefined {
+    const crossedCells = raycastGridCells(grid, from, to, geometry);
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+
+    for (let index = 0; index < crossedCells.length; index += 1) {
+        const cell = crossedCells[index];
+        if (grid.getTerrain(cell.x, cell.y) !== 'tree') {
+            continue;
+        }
+
+        if (index === 0) {
+            const normalX = Math.abs(dx) >= Math.abs(dy) ? -Math.sign(dx) : 0;
+            const normalY = Math.abs(dy) > Math.abs(dx) ? -Math.sign(dy) : 0;
+            return { hitX: from.x, hitY: from.y, normalX, normalY };
+        }
+
+        const previousCell = crossedCells[index - 1];
+        const normalX = previousCell.x < cell.x ? -1 : previousCell.x > cell.x ? 1 : 0;
+        const normalY = previousCell.y < cell.y ? -1 : previousCell.y > cell.y ? 1 : 0;
+        const hitTime = collisionTime(from, to, cell, normalX, normalY, geometry);
+        return {
+            hitX: from.x + dx * hitTime,
+            hitY: from.y + dy * hitTime,
+            normalX,
+            normalY,
+        };
+    }
+
+    return undefined;
+}
+
+function bounceProjectile(projectile: ProjectileState, collision: TreeCollision): void {
+    if (collision.normalX !== 0) {
+        projectile.vx *= -1;
+    }
+    if (collision.normalY !== 0) {
+        projectile.vy *= -1;
+    }
+    projectile.x = collision.hitX + collision.normalX * TREE_BOUNCE_OFFSET;
+    projectile.y = collision.hitY + collision.normalY * TREE_BOUNCE_OFFSET;
 }
 
 export class ProjectileSystem {
@@ -44,8 +126,15 @@ export class ProjectileSystem {
             projectile.x += projectile.vx * (deltaMs / 1000);
             projectile.y += projectile.vy * (deltaMs / 1000);
 
-            if (projectile.lifeMs <= 0 || segmentCrossesTree(grid, { x: projectile.previousX, y: projectile.previousY }, { x: projectile.x, y: projectile.y }, geometry)) {
+            if (projectile.lifeMs <= 0) {
                 continue;
+            }
+            const treeCollision = findFirstTreeCollision(grid, { x: projectile.previousX, y: projectile.previousY }, { x: projectile.x, y: projectile.y }, geometry);
+            if (treeCollision) {
+                if (!isTreeBounceable(projectile)) {
+                    continue;
+                }
+                bounceProjectile(projectile, treeCollision);
             }
 
             const hit = this.findHitEnemy(projectile, enemies);
