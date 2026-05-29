@@ -155,9 +155,13 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     await expect(page.getByTestId('build-popup')).toContainText(definitionText ?? '');
     await expect(page.getByTestId('build-popup')).toContainText(exampleText ?? '');
     await expect(page.getByTestId('build-popup')).toContainText(`Correct answer: ${correctAnswer}`);
+    await expect(page.getByTestId('answer-review-close')).toHaveCount(0);
     const answerReviewInput = page.getByTestId('answer-review-input');
     await expect(answerReviewInput).toBeVisible();
     await expect(answerReviewInput).toBeFocused();
+    await clickGamePoint(page, buildable!.worldX, buildable!.worldY);
+    await expect(page.getByTestId('build-popup')).toContainText(`Correct answer: ${correctAnswer}`);
+    await expect(answerReviewInput).toBeVisible();
     const exampleBlankFill = page.locator('[data-testid="build-popup"] .example-blank-fill');
     const previewChunk = correctAnswer?.slice(0, Math.max(1, Math.min(3, correctAnswer.length))) ?? 'a';
     await answerReviewInput.fill(previewChunk);

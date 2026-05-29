@@ -42,6 +42,7 @@ export class BottomPanel {
     private currentQuestion: VocabQuestion | undefined;
     private pendingAction: PendingAction | undefined;
     private questionActive = false;
+    private correctionRequired = false;
     private selectedBuildTower: BuildTowerSelection = 'easy';
     private panelExpanded = true;
     private includeExampleInQuestion: boolean;
@@ -59,6 +60,9 @@ export class BottomPanel {
     }
 
     openBuild(cell: GridPoint, anchor: Vec2): void {
+        if (this.correctionRequired) {
+            return;
+        }
         this.clearPendingClose();
         this.popupAnchor = anchor;
         const towerType = this.resolveBuildTower();
@@ -66,6 +70,9 @@ export class BottomPanel {
     }
 
     openUpgrade(tower: TowerState, anchor: Vec2): void {
+        if (this.correctionRequired) {
+            return;
+        }
         this.clearPendingClose();
         this.popupAnchor = anchor;
         if (!canUpgradeTower(tower)) {
@@ -87,8 +94,12 @@ export class BottomPanel {
         this.showQuestion({ kind: 'upgrade', tower, difficulty: getUpgradeQuestionDifficulty(tower, nextLevel) });
     }
 
-    close(): void {
+    close(force = false): void {
+        if (this.correctionRequired && !force) {
+            return;
+        }
         this.clearPendingClose();
+        this.correctionRequired = false;
         this.setQuestionActive(false);
         this.hideBuildMenu();
         this.popupAnchor = undefined;
@@ -112,6 +123,7 @@ export class BottomPanel {
 
     private showQuestion(action: PendingAction): void {
         this.clearPendingClose();
+        this.correctionRequired = false;
         this.hideBuildMenu();
         this.pendingAction = action;
         this.currentQuestion = this.vocab.createQuestion(action.difficulty);
@@ -188,16 +200,13 @@ export class BottomPanel {
         }
 
         const question = this.currentQuestion;
+        this.correctionRequired = true;
         this.hideBuildMenu();
 
         const header = this.createDiv('build-popup-header');
         const heading = this.createDiv('build-popup-head');
         heading.append(this.createParagraph('panel-kicker build-popup-kicker', DIFFICULTY_LABELS[question.difficulty]));
-
-        const closeButton = this.createButton('icon-button build-popup-close', '×', 'answer-review-close');
-        closeButton.setAttribute('aria-label', 'Close answer review');
-        closeButton.addEventListener('click', () => this.close());
-        header.append(heading, closeButton);
+        header.append(heading);
 
         const questionText = this.createQuestionText(question);
         const reviewBlankFills = Array.from(questionText.querySelectorAll<HTMLElement>('.example-blank-fill'));
