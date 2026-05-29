@@ -189,7 +189,7 @@ export class GameScene extends Phaser.Scene {
     private baseHealth = GAME_CONFIG.baseHealth;
     private baseDamageFlashMs = 0;
     private spawnRate: GameDifficulty = 'medium';
-    private baseDifficulty: BaseVocabDifficulty = 'year2';
+    private baseDifficulty: BaseVocabDifficulty = 'year3';
     private includeExampleInQuestion = true;
     private elapsedMs = 0;
     private kills = 0;
@@ -613,7 +613,7 @@ export class GameScene extends Phaser.Scene {
     private readSavedBaseDifficulty(): BaseVocabDifficulty {
         const savedBaseDifficulty = this.readUrlOption(URL_OPTION_KEYS.baseDifficulty)
             ?? window.localStorage.getItem(BASE_DIFFICULTY_STORAGE_KEY);
-        return savedBaseDifficulty && isBaseVocabDifficulty(savedBaseDifficulty) ? savedBaseDifficulty : 'year2';
+        return savedBaseDifficulty && isBaseVocabDifficulty(savedBaseDifficulty) ? savedBaseDifficulty : 'year3';
     }
 
     private readSavedIncludeExampleInQuestion(): boolean {
