@@ -1,6 +1,5 @@
 export default {
   word: 'check',
-  difficulty: 'year2',
   definition: 'To look carefully to make sure.',
   example: 'Owen will check his bag for the note.',
   synonyms: ['bank check', 'cheque'],

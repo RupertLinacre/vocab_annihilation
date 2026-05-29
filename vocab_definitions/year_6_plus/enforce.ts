@@ -1,6 +1,5 @@
 export default {
   word: 'enforce',
-  difficulty: 'year6Plus',
   definition: 'To make people obey a rule or law.',
   example: 'The referee will enforce the rule about staying in bounds.',
   synonyms: ['implement', 'apply'],

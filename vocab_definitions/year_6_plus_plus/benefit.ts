@@ -1,6 +1,5 @@
 export default {
   word: 'benefit',
-  difficulty: 'year6PlusPlus',
   definition: 'An advantage or helpful result.',
   example: 'One benefit of practice is feeling more confident.',
   synonyms: [],

@@ -1,6 +1,5 @@
 export default {
   word: 'monarch',
-  difficulty: 'year5',
   definition: 'A king, queen, or other single ruler.',
   example: 'The storybook monarch wore a bright silver crown.',
   synonyms: ['sovereign', 'crowned head'],

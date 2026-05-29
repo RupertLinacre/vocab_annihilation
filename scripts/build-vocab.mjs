@@ -8,8 +8,8 @@ const sourceDir = path.join(rootDir, 'vocab_definitions');
 const outputPath = path.join(rootDir, 'src', 'generated', 'vocab.ts');
 const checkOnly = process.argv.includes('--check');
 
-const REQUIRED_KEYS = ['word', 'difficulty', 'definition', 'example', 'synonyms', 'antonyms'];
-const DIFFICULTIES = new Set([
+const REQUIRED_KEYS = ['word', 'definition', 'example', 'synonyms', 'antonyms'];
+const DIFFICULTIES = [
     'reception',
     'year1',
     'year2',
@@ -19,7 +19,8 @@ const DIFFICULTIES = new Set([
     'year6',
     'year6Plus',
     'year6PlusPlus',
-]);
+];
+const DIFFICULTY_SET = new Set(DIFFICULTIES);
 const DIFFICULTY_DIRECTORIES = {
     reception: 'reception',
     year1: 'year_1',
@@ -31,21 +32,19 @@ const DIFFICULTY_DIRECTORIES = {
     year6Plus: 'year_6_plus',
     year6PlusPlus: 'year_6_plus_plus',
 };
+const DIRECTORY_DIFFICULTIES = Object.fromEntries(
+    Object.entries(DIFFICULTY_DIRECTORIES).map(([difficulty, directory]) => [directory, difficulty]),
+);
 
 function slug(word) {
     return word.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-function parseDefinitionFile(relativePath, expectedIndex) {
+function parseDefinitionFile(relativePath) {
     const fileName = path.basename(relativePath);
-    const match = /^(\d{3})_(.+)\.ts$/.exec(fileName);
+    const match = /^(.+)\.ts$/.exec(fileName);
     if (!match) {
-        throw new Error(`${relativePath}: expected a name like 001_word.ts`);
-    }
-
-    const index = Number(match[1]);
-    if (index !== expectedIndex) {
-        throw new Error(`${relativePath}: expected index ${String(expectedIndex).padStart(3, '0')}`);
+        throw new Error(`${relativePath}: expected a name like word.ts`);
     }
 
     const source = fs.readFileSync(path.join(sourceDir, relativePath), 'utf8');
@@ -61,17 +60,17 @@ function parseDefinitionFile(relativePath, expectedIndex) {
             throw new Error(`${relativePath}: missing ${key}`);
         }
     }
-    if (match[2] !== slug(entry.word)) {
+    if ('difficulty' in entry) {
+        throw new Error(`${relativePath}: source files should not declare difficulty; infer it from the folder name`);
+    }
+    if (match[1] !== slug(entry.word)) {
         throw new Error(`${relativePath}: slug does not match word ${entry.word}`);
     }
-    if (!DIFFICULTIES.has(entry.difficulty)) {
-        throw new Error(`${relativePath}: unknown difficulty ${entry.difficulty}`);
-    }
 
-    const expectedDirectory = DIFFICULTY_DIRECTORIES[entry.difficulty];
     const actualDirectory = path.dirname(relativePath);
-    if (actualDirectory !== expectedDirectory) {
-        throw new Error(`${relativePath}: expected to live in ${expectedDirectory}/ for difficulty ${entry.difficulty}`);
+    const inferredDifficulty = DIRECTORY_DIFFICULTIES[actualDirectory];
+    if (!inferredDifficulty || !DIFFICULTY_SET.has(inferredDifficulty)) {
+        throw new Error(`${relativePath}: unknown difficulty directory ${actualDirectory}`);
     }
     if (!String(entry.definition).trim()) {
         throw new Error(`${relativePath}: blank definition`);
@@ -86,7 +85,10 @@ function parseDefinitionFile(relativePath, expectedIndex) {
         throw new Error(`${relativePath}: antonyms must be an array`);
     }
 
-    return entry;
+    return {
+        ...entry,
+        difficulty: inferredDifficulty,
+    };
 }
 
 function listDefinitionFiles(currentDir, relativeDir = '') {
@@ -103,13 +105,15 @@ function listDefinitionFiles(currentDir, relativeDir = '') {
         });
 }
 
-function fileIndex(relativePath) {
-    const match = /^(\d{3})_/.exec(path.basename(relativePath));
-    if (!match) {
-        throw new Error(`${relativePath}: expected a name like 001_word.ts`);
+function fileSortKey(relativePath) {
+    const directory = path.dirname(relativePath);
+    const difficulty = DIRECTORY_DIFFICULTIES[directory];
+    const difficultyIndex = DIFFICULTIES.indexOf(difficulty);
+    if (difficultyIndex === -1) {
+        throw new Error(`${relativePath}: unknown difficulty directory ${directory}`);
     }
 
-    return Number(match[1]);
+    return [difficultyIndex, path.basename(relativePath)];
 }
 
 function formatArray(values) {
@@ -130,13 +134,22 @@ function formatEntry(entry) {
 }
 
 const files = listDefinitionFiles(sourceDir)
-    .sort((left, right) => fileIndex(left) - fileIndex(right));
+    .sort((left, right) => {
+        const [leftDifficultyIndex, leftFileName] = fileSortKey(left);
+        const [rightDifficultyIndex, rightFileName] = fileSortKey(right);
+
+        if (leftDifficultyIndex !== rightDifficultyIndex) {
+            return leftDifficultyIndex - rightDifficultyIndex;
+        }
+
+        return leftFileName.localeCompare(rightFileName);
+    });
 
 if (files.length === 0) {
     throw new Error(`No vocabulary definition files found in ${sourceDir}`);
 }
 
-const entries = files.map((fileName, index) => parseDefinitionFile(fileName, index + 1));
+const entries = files.map((fileName) => parseDefinitionFile(fileName));
 const output = `${[
     "import type { WordEntry } from '../../gameTypes';",
     '',

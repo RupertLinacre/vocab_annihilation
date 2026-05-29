@@ -1,6 +1,5 @@
 export default {
   word: 'ancestor',
-  difficulty: 'year4',
   definition: 'A person in your family who lived long ago.',
   example: 'My ancestor wrote stories that our family still reads.',
   synonyms: ['ascendant', 'ascendent', 'antecedent'],

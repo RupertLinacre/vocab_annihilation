@@ -1,6 +1,5 @@
 export default {
   word: 'leave',
-  difficulty: 'year2',
   definition: 'To go away from a place or person.',
   example: 'We leave the classroom when the bell rings.',
   synonyms: ['allow for', 'allow', 'provide'],

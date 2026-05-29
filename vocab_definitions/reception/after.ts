@@ -1,6 +1,5 @@
 export default {
     word: 'after',
-    difficulty: 'reception',
     definition: 'Later than something else.',
     example: 'We played outside after lunch.',
     synonyms: ['later', 'following'],

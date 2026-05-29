@@ -1,6 +1,5 @@
 export default {
   word: 'enough',
-  difficulty: 'year2',
   definition: 'As much as is needed.',
   example: 'There are enough crayons for everyone.',
   synonyms: ['sufficient', 'ample'],

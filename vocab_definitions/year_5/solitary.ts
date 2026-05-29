@@ -1,6 +1,5 @@
 export default {
   word: 'solitary',
-  difficulty: 'year5',
   definition: 'Alone; without others.',
   example: 'A solitary chair sat beside the classroom window.',
   synonyms: ['nongregarious', 'nonsocial'],

@@ -1,6 +1,5 @@
 export default {
   word: 'indicate',
-  difficulty: 'year6PlusPlus',
   definition: 'To show, point out, or suggest.',
   example: 'The arrow on the sign will indicate the library door.',
   synonyms: ['bespeak', 'betoken', 'point'],
