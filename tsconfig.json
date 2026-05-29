@@ -25,7 +25,6 @@
     "include": [
         "src",
         "tests",
-        "simpleWiktionaryDefinitions.ts",
         "vocab.ts",
         "gameTypes.ts",
         "vite.config.ts",
