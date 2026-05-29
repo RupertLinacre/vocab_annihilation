@@ -20,55 +20,96 @@ const DIFFICULTIES = new Set([
     'year6Plus',
     'year6PlusPlus',
 ]);
+const DIFFICULTY_DIRECTORIES = {
+    reception: 'reception',
+    year1: 'year_1',
+    year2: 'year_2',
+    year3: 'year_3',
+    year4: 'year_4',
+    year5: 'year_5',
+    year6: 'year_6',
+    year6Plus: 'year_6_plus',
+    year6PlusPlus: 'year_6_plus_plus',
+};
 
 function slug(word) {
     return word.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-function parseDefinitionFile(fileName, expectedIndex) {
+function parseDefinitionFile(relativePath, expectedIndex) {
+    const fileName = path.basename(relativePath);
     const match = /^(\d{3})_(.+)\.ts$/.exec(fileName);
     if (!match) {
-        throw new Error(`${fileName}: expected a name like 001_word.ts`);
+        throw new Error(`${relativePath}: expected a name like 001_word.ts`);
     }
 
     const index = Number(match[1]);
     if (index !== expectedIndex) {
-        throw new Error(`${fileName}: expected index ${String(expectedIndex).padStart(3, '0')}`);
+        throw new Error(`${relativePath}: expected index ${String(expectedIndex).padStart(3, '0')}`);
     }
 
-    const source = fs.readFileSync(path.join(sourceDir, fileName), 'utf8');
+    const source = fs.readFileSync(path.join(sourceDir, relativePath), 'utf8');
     const exportMatches = source.match(/\bexport\s+default\b/g) ?? [];
     if (exportMatches.length !== 1) {
-        throw new Error(`${fileName}: expected exactly one default export`);
+        throw new Error(`${relativePath}: expected exactly one default export`);
     }
 
     const expression = source.replace(/^\s*export\s+default\s*/, '').replace(/;\s*$/, '');
     const entry = vm.runInNewContext(`(${expression})`);
     for (const key of REQUIRED_KEYS) {
         if (!(key in entry)) {
-            throw new Error(`${fileName}: missing ${key}`);
+            throw new Error(`${relativePath}: missing ${key}`);
         }
     }
     if (match[2] !== slug(entry.word)) {
-        throw new Error(`${fileName}: slug does not match word ${entry.word}`);
+        throw new Error(`${relativePath}: slug does not match word ${entry.word}`);
     }
     if (!DIFFICULTIES.has(entry.difficulty)) {
-        throw new Error(`${fileName}: unknown difficulty ${entry.difficulty}`);
+        throw new Error(`${relativePath}: unknown difficulty ${entry.difficulty}`);
+    }
+
+    const expectedDirectory = DIFFICULTY_DIRECTORIES[entry.difficulty];
+    const actualDirectory = path.dirname(relativePath);
+    if (actualDirectory !== expectedDirectory) {
+        throw new Error(`${relativePath}: expected to live in ${expectedDirectory}/ for difficulty ${entry.difficulty}`);
     }
     if (!String(entry.definition).trim()) {
-        throw new Error(`${fileName}: blank definition`);
+        throw new Error(`${relativePath}: blank definition`);
     }
     if (!String(entry.example).trim()) {
-        throw new Error(`${fileName}: blank example`);
+        throw new Error(`${relativePath}: blank example`);
     }
     if (!Array.isArray(entry.synonyms)) {
-        throw new Error(`${fileName}: synonyms must be an array`);
+        throw new Error(`${relativePath}: synonyms must be an array`);
     }
     if (!Array.isArray(entry.antonyms)) {
-        throw new Error(`${fileName}: antonyms must be an array`);
+        throw new Error(`${relativePath}: antonyms must be an array`);
     }
 
     return entry;
+}
+
+function listDefinitionFiles(currentDir, relativeDir = '') {
+    return fs.readdirSync(currentDir, { withFileTypes: true })
+        .flatMap((entry) => {
+            const relativePath = path.join(relativeDir, entry.name);
+            const absolutePath = path.join(currentDir, entry.name);
+
+            if (entry.isDirectory()) {
+                return listDefinitionFiles(absolutePath, relativePath);
+            }
+
+            return entry.name.endsWith('.ts') ? [relativePath] : [];
+        });
+}
+
+function fileIndex(relativePath) {
+    const match = /^(\d{3})_/.exec(path.basename(relativePath));
+    if (!match) {
+        throw new Error(`${relativePath}: expected a name like 001_word.ts`);
+    }
+
+    return Number(match[1]);
 }
 
 function formatArray(values) {
@@ -88,9 +129,8 @@ function formatEntry(entry) {
     ].join('\n');
 }
 
-const files = fs.readdirSync(sourceDir)
-    .filter((fileName) => fileName.endsWith('.ts'))
-    .sort((left, right) => left.localeCompare(right));
+const files = listDefinitionFiles(sourceDir)
+    .sort((left, right) => fileIndex(left) - fileIndex(right));
 
 if (files.length === 0) {
     throw new Error(`No vocabulary definition files found in ${sourceDir}`);
