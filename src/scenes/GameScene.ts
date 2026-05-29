@@ -948,8 +948,14 @@ export class GameScene extends Phaser.Scene {
             }
 
             this.graphics.fillStyle(0x101614, 0.9);
+            const levelMarkerColumns = 4;
+            const levelMarkerSpacing = 5;
+            const levelMarkerStartX = center.x - ((levelMarkerColumns - 1) * levelMarkerSpacing) / 2;
+            const levelMarkerStartY = center.y + 7;
             for (let level = 0; level < tower.level; level += 1) {
-                this.graphics.fillCircle(center.x - 10 + level * 5, center.y + 18, 2);
+                const markerColumn = level % levelMarkerColumns;
+                const markerRow = Math.floor(level / levelMarkerColumns);
+                this.graphics.fillCircle(levelMarkerStartX + markerColumn * levelMarkerSpacing, levelMarkerStartY + markerRow * levelMarkerSpacing, 1.8);
             }
         }
 

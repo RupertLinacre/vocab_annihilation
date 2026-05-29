@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SeededRandom } from '../../src/core/SeededRandom';
-import { canUpgradeTower, createTower, getUpgradeQuestionDifficulty, upgradeTower } from '../../src/entities/Tower';
+import { canUpgradeTower, createTower, getMaxTowerLevel, getUpgradeQuestionDifficulty, upgradeTower } from '../../src/entities/Tower';
 import { blankWordInExample, mapRawDifficultyToTowerDifficulty, mapTowerDifficultyToRawDifficulty, normalizeVocab, VocabQuestionSystem } from '../../src/systems/VocabQuestionSystem';
 import type { NormalizedVocabEntry } from '../../src/types';
 
@@ -20,28 +20,37 @@ describe('vocabulary questions and upgrades', () => {
         expect(getUpgradeQuestionDifficulty({ type: 'easy' }, 4)).toBe('medium');
         expect(getUpgradeQuestionDifficulty({ type: 'easy' }, 6)).toBe('hard');
         expect(getUpgradeQuestionDifficulty({ type: 'easy' }, 8)).toBe('veryHard');
+        expect(getUpgradeQuestionDifficulty({ type: 'easy' }, 16)).toBe('veryHard');
 
         expect(getUpgradeQuestionDifficulty({ type: 'spray' }, 2)).toBe('medium');
         expect(getUpgradeQuestionDifficulty({ type: 'spray' }, 5)).toBe('hard');
         expect(getUpgradeQuestionDifficulty({ type: 'spray' }, 8)).toBe('veryHard');
+        expect(getUpgradeQuestionDifficulty({ type: 'spray' }, 16)).toBe('veryHard');
 
         expect(getUpgradeQuestionDifficulty({ type: 'missile' }, 2)).toBe('hard');
         expect(getUpgradeQuestionDifficulty({ type: 'missile' }, 5)).toBe('veryHard');
+        expect(getUpgradeQuestionDifficulty({ type: 'missile' }, 16)).toBe('veryHard');
 
         expect(getUpgradeQuestionDifficulty({ type: 'cluster' }, 2)).toBe('veryHard');
         expect(getUpgradeQuestionDifficulty({ type: 'cluster' }, 8)).toBe('veryHard');
+        expect(getUpgradeQuestionDifficulty({ type: 'cluster' }, 16)).toBe('veryHard');
     });
 
-    it('allows towers to upgrade through level 8', () => {
-        const tower = createTower(1, 0, 0, 'easy');
+    it('allows combat towers to upgrade through level 16', () => {
+        const combatTowerTypes = ['easy', 'spray', 'missile', 'cluster'] as const;
 
-        while (canUpgradeTower(tower)) {
-            expect(upgradeTower(tower)).toBe(true);
+        for (const towerType of combatTowerTypes) {
+            const tower = createTower(1, 0, 0, towerType);
+
+            while (canUpgradeTower(tower)) {
+                expect(upgradeTower(tower)).toBe(true);
+            }
+
+            expect(getMaxTowerLevel(towerType)).toBe(16);
+            expect(tower.level).toBe(16);
+            expect(canUpgradeTower(tower)).toBe(false);
+            expect(upgradeTower(tower)).toBe(false);
         }
-
-        expect(tower.level).toBe(8);
-        expect(canUpgradeTower(tower)).toBe(false);
-        expect(upgradeTower(tower)).toBe(false);
     });
 
     it('generates three unique answer choices with adjacent fallback distractors', () => {
