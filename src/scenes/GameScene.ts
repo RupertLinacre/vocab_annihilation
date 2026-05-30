@@ -779,8 +779,11 @@ export class GameScene extends Phaser.Scene {
         } else if (this.manualPauseRequested) {
             text = 'Game paused.';
             state = 'paused';
-        } else if (!this.spawningUnlocked) {
+        } else if (this.towers.length === 0) {
             text = 'Click on a square to place a tower to start game.';
+            state = 'instruction';
+        } else {
+            text = 'Click a tower to upgrade, or a blank square to place a new tower.';
             state = 'instruction';
         }
 

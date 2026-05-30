@@ -175,7 +175,7 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.isPaused())).toBe(false);
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getTowerCount())).toBe(1);
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getTowerTypes())).toEqual(['missile']);
-    await expect(page.getByTestId('game-status-message')).toBeHidden();
+    await expect(page.getByTestId('game-status-message')).toHaveText('Click a tower to upgrade, or a blank square to place a new tower.');
 
     const secondBuildable = await page.evaluate(() => window.vocabAnnihilation!.getFirstBuildableCell());
     expect(secondBuildable).not.toBeNull();
