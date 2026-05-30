@@ -75,22 +75,47 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getMusicMuted())).toBe(false);
     await expect.poll(() => new URL(page.url()).searchParams.get('music-muted')).toBe('false');
 
-    await page.getByTestId('settings-button').click();
-    await expect(page.getByTestId('settings-popup')).toBeVisible();
+    const openSettings = async () => {
+        await page.getByTestId('settings-button').click();
+        await expect(page.getByTestId('settings-popup')).toBeVisible();
+    };
+    const waitForGameReady = async () => {
+        await page.waitForFunction(() => Boolean(window.vocabAnnihilation) && document.querySelector('canvas') !== null);
+    };
+
+    await openSettings();
     await page.getByTestId('spawn-rate-select').selectOption('hard');
-    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getSpawnRate())).toBe('hard');
+    await page.waitForFunction(() => window.vocabAnnihilation?.getSpawnRate() === 'hard');
+    await waitForGameReady();
     await expect.poll(() => new URL(page.url()).searchParams.get('spawn-rate')).toBe('hard');
+
+    await openSettings();
     await page.getByTestId('base-difficulty-select').selectOption('year1');
-    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getBaseDifficulty())).toBe('year1');
+    await page.waitForFunction(() => window.vocabAnnihilation?.getBaseDifficulty() === 'year1');
+    await waitForGameReady();
     await expect.poll(() => new URL(page.url()).searchParams.get('base-difficulty')).toBe('year1');
+
+    await openSettings();
     await page.getByTestId('base-difficulty-select').selectOption('adultLevel1');
-    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getBaseDifficulty())).toBe('adultLevel1');
+    await page.waitForFunction(() => window.vocabAnnihilation?.getBaseDifficulty() === 'adultLevel1');
+    await waitForGameReady();
     await expect.poll(() => new URL(page.url()).searchParams.get('base-difficulty')).toBe('adultLevel1');
+
+    await openSettings();
     await expect(page.getByTestId('include-example-checkbox')).toBeChecked();
-    await page.getByTestId('include-example-checkbox').uncheck();
+    await page.getByTestId('include-example-checkbox').click();
+    await page.waitForFunction(() => new URL(window.location.href).searchParams.get('include-example') === 'false');
+    await waitForGameReady();
     await expect.poll(() => new URL(page.url()).searchParams.get('include-example')).toBe('false');
-    await page.getByTestId('include-example-checkbox').check();
+
+    await openSettings();
+    await expect(page.getByTestId('include-example-checkbox')).not.toBeChecked();
+    await page.getByTestId('include-example-checkbox').click();
+    await page.waitForFunction(() => new URL(window.location.href).searchParams.get('include-example') === 'true');
+    await waitForGameReady();
     await expect.poll(() => new URL(page.url()).searchParams.get('include-example')).toBe('true');
+
+    await openSettings();
     await page.getByTestId('settings-button').click();
     await expect(page.getByTestId('settings-popup')).toBeHidden();
 

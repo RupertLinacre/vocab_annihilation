@@ -581,6 +581,10 @@ export class GameScene extends Phaser.Scene {
             popup.hidden = true;
             button.setAttribute('aria-expanded', 'false');
         };
+        const restartGame = () => {
+            closePopup();
+            window.location.reload();
+        };
 
         button.addEventListener('click', () => {
             const shouldOpen = popup.hidden;
@@ -589,18 +593,23 @@ export class GameScene extends Phaser.Scene {
         });
         spawnRateSelect.addEventListener('change', () => {
             const value = spawnRateSelect.value;
-            if (isGameDifficulty(value)) {
+            if (isGameDifficulty(value) && value !== this.spawnRate) {
                 this.setSpawnRate(value);
+                restartGame();
             }
         });
         baseDifficultySelect.addEventListener('change', () => {
             const value = baseDifficultySelect.value;
-            if (isBaseVocabDifficulty(value)) {
+            if (isBaseVocabDifficulty(value) && value !== this.baseDifficulty) {
                 this.setBaseDifficulty(value);
+                restartGame();
             }
         });
         includeExampleCheckbox.addEventListener('change', () => {
-            this.setIncludeExampleInQuestion(includeExampleCheckbox.checked);
+            if (includeExampleCheckbox.checked !== this.includeExampleInQuestion) {
+                this.setIncludeExampleInQuestion(includeExampleCheckbox.checked);
+                restartGame();
+            }
         });
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {

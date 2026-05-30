@@ -1000,46 +1000,50 @@ html.is-mobile .side-info .bottom-panel .panel-body {
 }
 
 html.is-mobile .side-info .bottom-panel .difficulty-selector-row {
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
+  gap: 8px;
 }
 
 html.is-mobile .side-info .bottom-panel .difficulty-selector-button {
   flex: 0 0 auto;
+  min-width: 0;
   width: 100%;
   max-width: none;
-  gap: 8px;
-  height: 72px;
-  padding: 6px 10px;
+  gap: 6px;
+  height: auto;
+  min-height: 56px;
+  padding: 5px 8px;
 }
 
 html.is-mobile .side-info .bottom-panel .tower-selector-image {
-  height: 56px;
+  height: 38px;
 }
 
 html.is-mobile .side-info .bottom-panel .tower-selector-marker {
-  width: 38px;
-  height: 38px;
-  flex-basis: 38px;
+  width: 28px;
+  height: 28px;
+  flex-basis: 28px;
 }
 
 html.is-mobile .side-info .bottom-panel .tower-selector-marker-airstrike {
-  box-shadow: inset 0 0 0 6px rgba(247, 240, 214, 0.08), inset 0 0 0 1px rgba(0, 0, 0, 0.78);
+  box-shadow: inset 0 0 0 4px rgba(247, 240, 214, 0.08), inset 0 0 0 1px rgba(0, 0, 0, 0.78);
 }
 
 html.is-mobile .side-info .bottom-panel .tower-selector-marker-airstrike::before {
-  left: 6px;
-  right: 6px;
+  left: 4px;
+  right: 4px;
 }
 
 html.is-mobile .side-info .bottom-panel .tower-selector-marker-airstrike::after {
-  top: 6px;
-  bottom: 6px;
+  top: 4px;
+  bottom: 4px;
 }
 
 html.is-mobile .side-info .bottom-panel .tower-selector-label {
-  font-size: 11px;
-  line-height: 1.15;
+  font-size: 10px;
+  line-height: 1.1;
 }
 
 html.is-mobile .drawer-backdrop {
