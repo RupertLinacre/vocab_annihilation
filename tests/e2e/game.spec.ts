@@ -22,7 +22,7 @@ declare global {
             getSpawnRate: () => string;
             setSpawnRate: (spawnRate: 'veryEasy' | 'easy' | 'medium' | 'hard' | 'veryHard') => void;
             getBaseDifficulty: () => string;
-            setBaseDifficulty: (difficulty: 'reception' | 'year1' | 'year2' | 'year3' | 'year4' | 'year5') => void;
+            setBaseDifficulty: (difficulty: string) => void;
             getMusicMuted: () => boolean;
             setMusicMuted: (muted: boolean) => void;
             getMusicVolume: () => number;
@@ -83,6 +83,9 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     await page.getByTestId('base-difficulty-select').selectOption('year1');
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getBaseDifficulty())).toBe('year1');
     await expect.poll(() => new URL(page.url()).searchParams.get('base-difficulty')).toBe('year1');
+    await page.getByTestId('base-difficulty-select').selectOption('adultLevel1');
+    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getBaseDifficulty())).toBe('adultLevel1');
+    await expect.poll(() => new URL(page.url()).searchParams.get('base-difficulty')).toBe('adultLevel1');
     await expect(page.getByTestId('include-example-checkbox')).toBeChecked();
     await page.getByTestId('include-example-checkbox').uncheck();
     await expect.poll(() => new URL(page.url()).searchParams.get('include-example')).toBe('false');

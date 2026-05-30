@@ -79,6 +79,11 @@ describe('vocabulary questions and upgrades', () => {
         expect(mapTowerDifficultyToRawDifficulty('medium', 'year1')).toBe('year2');
         expect(mapTowerDifficultyToRawDifficulty('hard', 'year1')).toBe('year3');
         expect(mapTowerDifficultyToRawDifficulty('veryHard', 'year1')).toBe('year4');
+
+        expect(mapTowerDifficultyToRawDifficulty('easy', 'adultLevel1')).toBe('adultLevel1');
+        expect(mapTowerDifficultyToRawDifficulty('medium', 'adultLevel1')).toBe('adultLevel2');
+        expect(mapTowerDifficultyToRawDifficulty('hard', 'adultLevel1')).toBe('adultLevel3');
+        expect(mapTowerDifficultyToRawDifficulty('veryHard', 'adultLevel7')).toBe('adultLevel10');
     });
 
     it('normalizes raw vocab against the chosen base difficulty', () => {
@@ -87,6 +92,7 @@ describe('vocabulary questions and upgrades', () => {
             { word: 'beta', definition: 'second', example: 'The beta card came next.', difficulty: 'year2', synonyms: [], antonyms: [] },
             { word: 'gamma', definition: 'third', example: 'The gamma label was on the third box.', difficulty: 'year4', synonyms: [], antonyms: [] },
             { word: 'delta', definition: 'fourth', example: 'The delta kite flew over the field.', difficulty: 'year6PlusPlus', synonyms: [], antonyms: [] },
+            { word: 'epsilon', definition: 'fifth', example: 'The epsilon note came last.', difficulty: 'adultLevel1', synonyms: [], antonyms: [] },
         ], 'year1');
 
         expect(normalized.map((entry) => entry.difficulty)).toEqual(['easy', 'medium', 'veryHard', 'veryHard']);
@@ -95,6 +101,15 @@ describe('vocabulary questions and upgrades', () => {
         expect(mapRawDifficultyToTowerDifficulty('year2', 'year1')).toBe('medium');
         expect(mapRawDifficultyToTowerDifficulty('year3', 'year1')).toBe('hard');
         expect(mapRawDifficultyToTowerDifficulty('year4', 'year1')).toBe('veryHard');
+
+        const adultNormalized = normalizeVocab([
+            { word: 'alpha', definition: 'first', example: 'The alpha team lined up first.', difficulty: 'year1', synonyms: [], antonyms: [] },
+            { word: 'paraphrase', definition: 'restate an idea', example: 'Please paraphrase the memo in plain terms.', difficulty: 'adultLevel1', synonyms: [], antonyms: [] },
+            { word: 'ostensible', definition: 'appearing to be true', example: 'The ostensible reason hid the real motive.', difficulty: 'adultLevel2', synonyms: [], antonyms: [] },
+        ], 'adultLevel1');
+
+        expect(adultNormalized.map((entry) => entry.word)).toEqual(['paraphrase', 'ostensible']);
+        expect(adultNormalized.map((entry) => entry.difficulty)).toEqual(['easy', 'medium']);
     });
 
     it('uses source definitions and masks whole-word examples', () => {

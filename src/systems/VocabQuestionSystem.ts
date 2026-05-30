@@ -5,11 +5,45 @@ import type { NormalizedVocabEntry, TowerDifficulty, VocabQuestion } from '../ty
 
 const DIFFICULTY_ORDER: TowerDifficulty[] = ['easy', 'medium', 'hard', 'veryHard'];
 
-export const BASE_VOCAB_DIFFICULTIES = ['reception', 'year1', 'year2', 'year3', 'year4', 'year5'] as const;
+const CHILD_BASE_VOCAB_DIFFICULTIES = ['reception', 'year1', 'year2', 'year3', 'year4', 'year5'] as const;
+const ADULT_BASE_VOCAB_DIFFICULTIES = [
+    'adultLevel1',
+    'adultLevel2',
+    'adultLevel3',
+    'adultLevel4',
+    'adultLevel5',
+    'adultLevel6',
+    'adultLevel7',
+    'adultLevel8',
+    'adultLevel9',
+    'adultLevel10',
+] as const;
+
+export const BASE_VOCAB_DIFFICULTIES = [...CHILD_BASE_VOCAB_DIFFICULTIES, ...ADULT_BASE_VOCAB_DIFFICULTIES] as const;
 
 export type BaseVocabDifficulty = (typeof BASE_VOCAB_DIFFICULTIES)[number];
 
-const RAW_DIFFICULTY_ORDER: RawVocabDifficulty[] = ['reception', 'year1', 'year2', 'year3', 'year4', 'year5', 'year6', 'year6Plus', 'year6PlusPlus'];
+const RAW_DIFFICULTY_ORDER: RawVocabDifficulty[] = [
+    'reception',
+    'year1',
+    'year2',
+    'year3',
+    'year4',
+    'year5',
+    'year6',
+    'year6Plus',
+    'year6PlusPlus',
+    'adultLevel1',
+    'adultLevel2',
+    'adultLevel3',
+    'adultLevel4',
+    'adultLevel5',
+    'adultLevel6',
+    'adultLevel7',
+    'adultLevel8',
+    'adultLevel9',
+    'adultLevel10',
+];
 
 export const RAW_VOCAB_DIFFICULTY_LABELS: Record<RawVocabDifficulty, string> = {
     reception: 'Reception',
@@ -21,6 +55,16 @@ export const RAW_VOCAB_DIFFICULTY_LABELS: Record<RawVocabDifficulty, string> = {
     year6: 'Year 6',
     year6Plus: 'Year 6+',
     year6PlusPlus: 'Year 6++',
+    adultLevel1: 'Adult Level 1',
+    adultLevel2: 'Adult Level 2',
+    adultLevel3: 'Adult Level 3',
+    adultLevel4: 'Adult Level 4',
+    adultLevel5: 'Adult Level 5',
+    adultLevel6: 'Adult Level 6',
+    adultLevel7: 'Adult Level 7',
+    adultLevel8: 'Adult Level 8',
+    adultLevel9: 'Adult Level 9',
+    adultLevel10: 'Adult Level 10',
 };
 
 const TOWER_DIFFICULTY_OFFSETS: Record<TowerDifficulty, number> = {
@@ -32,6 +76,10 @@ const TOWER_DIFFICULTY_OFFSETS: Record<TowerDifficulty, number> = {
 
 function clampDifficultyIndex(index: number): number {
     return Math.max(0, Math.min(index, RAW_DIFFICULTY_ORDER.length - 1));
+}
+
+function isAdultVocabDifficulty(difficulty: RawVocabDifficulty): boolean {
+    return difficulty.startsWith('adultLevel');
 }
 
 export function mapTowerDifficultyToRawDifficulty(difficulty: TowerDifficulty, baseDifficulty: BaseVocabDifficulty = 'reception'): RawVocabDifficulty {
@@ -63,12 +111,15 @@ export function normalizeVocab(
     entries: readonly WordEntry[] = ALL_VOCAB,
     baseDifficulty: BaseVocabDifficulty = 'reception',
 ): NormalizedVocabEntry[] {
-    return entries.map((entry) => ({
-        word: entry.word,
-        definition: entry.definition,
-        example: entry.example,
-        difficulty: mapRawDifficultyToTowerDifficulty(entry.difficulty, baseDifficulty),
-    }));
+    const adultMode = isAdultVocabDifficulty(baseDifficulty);
+    return entries
+        .filter((entry) => isAdultVocabDifficulty(entry.difficulty) === adultMode)
+        .map((entry) => ({
+            word: entry.word,
+            definition: entry.definition,
+            example: entry.example,
+            difficulty: mapRawDifficultyToTowerDifficulty(entry.difficulty, baseDifficulty),
+        }));
 }
 
 function escapeRegExp(value: string): string {
