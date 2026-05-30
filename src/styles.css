@@ -790,3 +790,229 @@ body {
 .game-over .primary-button {
   justify-self: center;
 }
+
+/* ------------------------------------------------------------------ */
+/* Mobile landscape layout (touch / coarse-pointer devices only).     */
+/* Desktop is unaffected because these rules require html.is-mobile.  */
+/* ------------------------------------------------------------------ */
+
+html.is-mobile,
+html.is-mobile body {
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+html.is-mobile #app-shell {
+  min-width: 0;
+  width: 100%;
+  height: 100dvh;
+  padding: 0;
+  gap: 0;
+}
+
+html.is-mobile #game-frame {
+  width: 100vw;
+  height: 100dvh;
+  max-height: none;
+  aspect-ratio: auto;
+  flex-direction: row;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+html.is-mobile .site-footer {
+  display: none;
+}
+
+html.is-mobile #game-topbar {
+  display: none;
+}
+
+html.is-mobile #game-surface {
+  flex: 1 1 auto;
+  height: 100%;
+  min-width: 0;
+}
+
+html.is-mobile #game-root canvas {
+  touch-action: none;
+}
+
+/* Right-hand info panel ------------------------------------------------ */
+html.is-mobile #side-panel {
+  flex: 0 0 auto;
+  width: clamp(236px, 33vw, 372px);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  padding-right: calc(10px + env(safe-area-inset-right, 0px));
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  border-left: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(16, 24, 19, 0.98), rgba(12, 18, 15, 0.98));
+}
+
+html.is-mobile .side-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+html.is-mobile #topbar-controls {
+  position: static;
+  top: auto;
+  right: auto;
+}
+
+html.is-mobile .side-hud {
+  display: flex;
+}
+
+html.is-mobile #hud {
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: 12px;
+}
+
+html.is-mobile .side-info {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+html.is-mobile .side-info #game-status-message {
+  font-size: 14px;
+}
+
+/* Docked question / answer / review panel inside the info column. */
+html.is-mobile .side-info .build-popup {
+  position: static;
+  left: auto;
+  top: auto;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  padding: 12px;
+  box-shadow: none;
+  backdrop-filter: none;
+  background: rgba(20, 28, 23, 0.92);
+}
+
+html.is-mobile .side-info .build-popup .popup-definition {
+  font-size: 16px;
+}
+
+html.is-mobile .side-info .build-popup .choice-button {
+  flex: 1 1 100%;
+  min-height: 48px;
+}
+
+html.is-mobile .side-towers-button {
+  flex: 0 0 auto;
+  min-height: 54px;
+  border: 1px solid rgba(247, 240, 214, 0.3);
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--panel-strong);
+  font: inherit;
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+html.is-mobile .side-towers-button.is-active {
+  border-color: rgba(243, 182, 75, 0.7);
+  background: rgba(243, 182, 75, 0.18);
+  color: #fff8df;
+}
+
+/* Tower picker as a right-edge drawer ---------------------------------- */
+html.is-mobile .bottom-panel {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  z-index: 12;
+  width: min(82vw, 420px);
+  height: 100%;
+  padding: 14px;
+  border-top: none;
+  border-left: 1px solid var(--line);
+  background: rgba(14, 20, 17, 0.98);
+  box-shadow: -18px 0 50px rgba(0, 0, 0, 0.5);
+  transform: translateX(100%);
+  transition: transform 200ms ease-out;
+  overflow-y: auto;
+}
+
+html.is-mobile .bottom-panel.is-open {
+  transform: translateX(0);
+}
+
+html.is-mobile .bottom-panel .difficulty-selector-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+html.is-mobile .bottom-panel .difficulty-selector-button {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: none;
+}
+
+html.is-mobile .drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 11;
+  background: rgba(6, 9, 8, 0.5);
+}
+
+html.is-mobile .drawer-backdrop[hidden] {
+  display: none;
+}
+
+html.is-mobile .settings-popup {
+  top: auto;
+  right: 8px;
+  bottom: 8px;
+  left: auto;
+  z-index: 14;
+  width: min(320px, 86vw);
+  max-height: 80dvh;
+  overflow-y: auto;
+}
+
+/* Ask the player to rotate to landscape. */
+html.is-mobile.is-portrait #game-frame {
+  visibility: hidden;
+}
+
+html.is-mobile.is-portrait::after {
+  content: "Rotate your device to landscape to play.";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.4;
+  color: var(--ink);
+  background: #0e1914;
+}
+

@@ -22,6 +22,7 @@ import {
     VocabQuestionSystem,
 } from '../systems/VocabQuestionSystem';
 import { BottomPanel, type BuildTowerSelection } from '../ui/BottomPanel';
+import { isMobileLayout, MobileLayout } from '../ui/mobile';
 import type { EnemyState, GridPoint, ProjectileState, TerrainType, TowerState, TowerType, Vec2 } from '../types';
 
 const SPRITE_PATHS = {
@@ -175,6 +176,7 @@ export class GameScene extends Phaser.Scene {
     private enemySprites = new Map<number, Phaser.GameObjects.Image>();
     private costTexts: Phaser.GameObjects.Text[] = [];
     private panel!: BottomPanel;
+    private mobileLayout?: MobileLayout;
     private vocabSystem!: VocabQuestionSystem;
     private spawner!: EnemySpawner;
     private towerSystem = new TowerSystem();
@@ -240,13 +242,24 @@ export class GameScene extends Phaser.Scene {
         this.createMapSprites();
         this.spawner = new EnemySpawner(this.generatedMap.spawns, GAME_CONFIG.map, new SeededRandom(`${seed}:spawns`));
         this.vocabSystem = new VocabQuestionSystem(new SeededRandom(`${seed}:vocab`), normalizeVocab(ALL_VOCAB, this.baseDifficulty));
+        if (isMobileLayout()) {
+            this.mobileLayout = new MobileLayout();
+        }
         this.panel = new BottomPanel(this.vocabSystem, {
             onBuild: (cell, difficulty) => this.buildTower(cell, difficulty),
             onUpgrade: (tower) => this.upgradeExistingTower(tower),
             onAnswered: (correct) => this.recordAnswer(correct),
             onQuestionStateChange: (isActive) => this.setQuestionPause(isActive),
             onClose: () => this.clearSelection(),
-        }, this.includeExampleInQuestion);
+        }, this.includeExampleInQuestion, this.mobileLayout ? { infoHost: this.mobileLayout.getInfoHost() } : undefined);
+        if (this.mobileLayout) {
+            this.mobileLayout.bindDrawer({
+                toggle: () => this.panel.toggleDrawer(),
+                close: () => this.panel.closeDrawer(),
+                isOpen: () => this.panel.isDrawerOpen(),
+                onOpenChange: (listener) => this.panel.onDrawerOpenChange(listener),
+            });
+        }
         this.setupMusicControls();
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.handlePointerDown(pointer));
         this.registerDebugKeys();
@@ -254,6 +267,7 @@ export class GameScene extends Phaser.Scene {
         this.setupPauseControls();
         this.setupGameOverControls();
         this.installBrowserHooks();
+        this.applyMobileCamera();
         this.updateHud();
         this.syncStatusMessage();
         this.render();
@@ -354,7 +368,7 @@ export class GameScene extends Phaser.Scene {
         if (this.gameOver) {
             return;
         }
-        const cell = worldToGrid({ x: pointer.x, y: pointer.y }, this.generatedMap.grid, GAME_CONFIG.map);
+        const cell = worldToGrid(this.toWorldPoint(pointer), this.generatedMap.grid, GAME_CONFIG.map);
         if (!cell) {
             this.panel.close();
             this.render();
@@ -510,6 +524,36 @@ export class GameScene extends Phaser.Scene {
             x: bounds.left + pointer.x * (bounds.width / canvas.width),
             y: bounds.top + pointer.y * (bounds.height / canvas.height),
         };
+    }
+
+    private toWorldPoint(pointer: Phaser.Input.Pointer): Vec2 {
+        // On mobile the camera is zoomed onto the map, so use camera-adjusted
+        // world coordinates; desktop keeps the default 1:1 mapping.
+        if (this.mobileLayout) {
+            return { x: pointer.worldX, y: pointer.worldY };
+        }
+        return { x: pointer.x, y: pointer.y };
+    }
+
+    private applyMobileCamera(): void {
+        if (!this.mobileLayout) {
+            return;
+        }
+        const camera = this.cameras.main;
+        const { originX, originY, cols, rows, cellSize } = GAME_CONFIG.map;
+        const mapWidth = cols * cellSize;
+        const mapHeight = rows * cellSize;
+        const padding = 10;
+        const fit = () => {
+            const zoom = Math.min(
+                GAME_CONFIG.canvasWidth / (mapWidth + padding * 2),
+                GAME_CONFIG.canvasHeight / (mapHeight + padding * 2),
+            );
+            camera.setZoom(zoom);
+            camera.centerOn(originX + mapWidth / 2, originY + mapHeight / 2);
+        };
+        fit();
+        this.scale.on(Phaser.Scale.Events.RESIZE, fit);
     }
 
     private registerDebugKeys(): void {

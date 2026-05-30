@@ -27,6 +27,10 @@ interface BottomPanelCallbacks {
     onClose: () => void;
 }
 
+export interface BottomPanelMobileOptions {
+    infoHost: HTMLElement;
+}
+
 type PendingAction =
     | { kind: 'build'; cell: GridPoint; towerType: TowerType; difficulty: TowerDifficulty }
     | { kind: 'upgrade'; tower: TowerState; difficulty: TowerDifficulty };
@@ -46,17 +50,47 @@ export class BottomPanel {
     private selectedBuildTower: BuildTowerSelection = 'easy';
     private panelExpanded = true;
     private includeExampleInQuestion: boolean;
+    private readonly mobile: BottomPanelMobileOptions | undefined;
+    private readonly drawerOpenListeners = new Set<(open: boolean) => void>();
 
-    constructor(private readonly vocab: VocabQuestionSystem, private readonly callbacks: BottomPanelCallbacks, includeExampleInQuestion = true) {
+    constructor(
+        private readonly vocab: VocabQuestionSystem,
+        private readonly callbacks: BottomPanelCallbacks,
+        includeExampleInQuestion = true,
+        mobile?: BottomPanelMobileOptions,
+    ) {
         this.includeExampleInQuestion = includeExampleInQuestion;
+        this.mobile = mobile;
         this.buildMenu = document.createElement('section');
         this.buildMenu.className = 'build-popup';
         this.buildMenu.dataset.testid = 'build-popup';
         this.buildMenu.hidden = true;
-        this.frame.append(this.buildMenu);
+        (this.mobile?.infoHost ?? this.frame).append(this.buildMenu);
         this.toggleButton.addEventListener('click', () => this.setExpanded(!this.panelExpanded));
         this.renderDifficultySelector();
-        this.setExpanded(true);
+        // On mobile the tower picker starts collapsed as a right-edge drawer.
+        this.setExpanded(!this.mobile);
+    }
+
+    isMobile(): boolean {
+        return this.mobile !== undefined;
+    }
+
+    toggleDrawer(): void {
+        this.setExpanded(!this.panelExpanded);
+    }
+
+    closeDrawer(): void {
+        this.setExpanded(false);
+    }
+
+    isDrawerOpen(): boolean {
+        return this.panelExpanded;
+    }
+
+    onDrawerOpenChange(listener: (open: boolean) => void): void {
+        this.drawerOpenListeners.add(listener);
+        listener(this.panelExpanded);
     }
 
     openBuild(cell: GridPoint, anchor: Vec2): void {
@@ -111,6 +145,10 @@ export class BottomPanel {
     setSelectedBuildDifficulty(selection: BuildTowerSelection): void {
         this.selectedBuildTower = selection;
         this.renderDifficultySelector();
+        // Selecting a tower on mobile dismisses the drawer back to the info panel.
+        if (this.mobile) {
+            this.setExpanded(false);
+        }
     }
 
     getSelectedBuildTower(): BuildTowerSelection {
@@ -307,6 +345,7 @@ export class BottomPanel {
         this.toggleButton.textContent = expanded ? '↓' : '↑';
         this.toggleButton.setAttribute('aria-expanded', String(expanded));
         this.toggleButton.setAttribute('aria-label', expanded ? 'Collapse difficulty panel' : 'Expand difficulty panel');
+        this.drawerOpenListeners.forEach((listener) => listener(expanded));
     }
 
     private clearPendingClose(): void {
@@ -326,6 +365,10 @@ export class BottomPanel {
     }
 
     private positionBuildMenu(anchor: Vec2): void {
+        // On mobile the popup is docked inside the side info panel, no anchoring needed.
+        if (this.mobile) {
+            return;
+        }
         const frameBounds = this.frame.getBoundingClientRect();
         const menuBounds = this.buildMenu.getBoundingClientRect();
         const relativeX = anchor.x - frameBounds.left;
