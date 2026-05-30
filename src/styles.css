@@ -732,6 +732,8 @@ body {
 
 .game-over div,
 .pause-overlay div {
+  display: grid;
+  gap: 14px;
   min-width: 280px;
   padding: 24px;
   border: 1px solid var(--line);
@@ -756,4 +758,8 @@ body {
 
 .game-over strong {
   font-size: 20px;
+}
+
+.game-over .primary-button {
+  justify-self: center;
 }

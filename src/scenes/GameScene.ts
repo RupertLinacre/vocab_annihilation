@@ -252,6 +252,7 @@ export class GameScene extends Phaser.Scene {
         this.registerDebugKeys();
         this.setupSettingsControls();
         this.setupPauseControls();
+        this.setupGameOverControls();
         this.installBrowserHooks();
         this.updateHud();
         this.syncStatusMessage();
@@ -601,6 +602,12 @@ export class GameScene extends Phaser.Scene {
         this.manualPauseRequested = false;
         this.questionPauseActive = false;
         this.syncPauseState();
+    }
+
+    private setupGameOverControls(): void {
+        document.querySelector<HTMLButtonElement>('[data-testid="restart-game-button"]')?.addEventListener('click', () => {
+            window.location.reload();
+        });
     }
 
     private readSavedSpawnRate(): GameDifficulty {

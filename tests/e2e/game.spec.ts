@@ -199,5 +199,19 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     await page.evaluate(() => window.vocabAnnihilation!.spawnEnemyNearBase());
     await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getBaseHealth())).toBeLessThan(healthBefore);
     await expect(page.locator('#hud')).toHaveClass(/base-hit/);
+
+    await page.evaluate(() => {
+        for (let index = 0; index < 30; index += 1) {
+            window.vocabAnnihilation!.spawnEnemyNearBase();
+        }
+    });
+    await expect(page.getByTestId('game-over')).toBeVisible();
+    await expect(page.getByTestId('restart-game-button')).toBeVisible();
+    await page.getByTestId('restart-game-button').click();
+    await page.waitForLoadState('domcontentloaded');
+    await expect.poll(() => page.evaluate(() => Boolean(window.vocabAnnihilation))).toBe(true);
+    await expect(page.getByTestId('game-over')).toBeHidden();
+    await expect(page.locator('[data-stat="health"]')).toHaveText('100');
+    await expect.poll(() => page.evaluate(() => window.vocabAnnihilation!.getBaseHealth())).toBe(100);
     expect(errors).toEqual([]);
 });
