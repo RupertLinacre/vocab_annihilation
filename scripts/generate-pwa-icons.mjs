@@ -24,9 +24,9 @@ async function renderIcon({ size, fileName, safeAreaRatio }) {
     const ringRadius = Math.round(size * 0.46);
     const ring = Buffer.from(
         `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">` +
-            `<circle cx="${size / 2}" cy="${size / 2}" r="${ringRadius}" fill="none" ` +
-            `stroke="rgb(${ACCENT.r},${ACCENT.g},${ACCENT.b})" stroke-width="${Math.max(4, Math.round(size * 0.03))}" stroke-opacity="0.6"/>` +
-            `</svg>`,
+        `<circle cx="${size / 2}" cy="${size / 2}" r="${ringRadius}" fill="none" ` +
+        `stroke="rgb(${ACCENT.r},${ACCENT.g},${ACCENT.b})" stroke-width="${Math.max(4, Math.round(size * 0.03))}" stroke-opacity="0.6"/>` +
+        `</svg>`,
     );
 
     const spriteSize = Math.round(size * safeAreaRatio);

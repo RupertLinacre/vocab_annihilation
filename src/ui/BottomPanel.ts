@@ -196,6 +196,7 @@ export class BottomPanel {
 
     private hideBuildMenu(): void {
         this.buildMenu.classList.remove('is-open');
+        this.buildMenu.classList.remove('is-answer-popup');
         this.buildMenu.hidden = true;
         this.buildMenu.innerHTML = '';
         this.buildMenu.style.left = '';
@@ -209,13 +210,18 @@ export class BottomPanel {
         }
 
         const header = this.createDiv('build-popup-header');
-        const heading = this.createDiv('build-popup-head');
-        heading.append(this.createParagraph('panel-kicker build-popup-kicker', DIFFICULTY_LABELS[this.currentQuestion.difficulty]));
+        if (this.mobile) {
+            header.classList.add('build-popup-header-compact');
+        } else {
+            const heading = this.createDiv('build-popup-head');
+            heading.append(this.createParagraph('panel-kicker build-popup-kicker', DIFFICULTY_LABELS[this.currentQuestion.difficulty]));
+            header.append(heading);
+        }
 
         const closeButton = this.createButton('icon-button build-popup-close', '×', 'answer-popup-close');
         closeButton.setAttribute('aria-label', 'Close answers');
         closeButton.addEventListener('click', () => this.close());
-        header.append(heading, closeButton);
+        header.append(closeButton);
 
         const questionText = this.createQuestionText(this.currentQuestion);
         const row = this.createDiv('build-popup-actions answer-popup-actions');
@@ -228,6 +234,7 @@ export class BottomPanel {
 
         this.buildMenu.append(header, questionText, row);
         this.buildMenu.hidden = false;
+        this.buildMenu.classList.add('is-answer-popup');
         this.buildMenu.classList.add('is-open');
         this.positionBuildMenu(this.popupAnchor);
     }

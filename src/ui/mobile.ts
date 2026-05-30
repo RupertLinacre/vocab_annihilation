@@ -103,6 +103,10 @@ export class MobileLayout {
         });
     }
 
+    setQuestionActive(active: boolean): void {
+        document.documentElement.classList.toggle('is-question-active', active);
+    }
+
     private installOrientationWatch(): void {
         const update = () => {
             const portrait = window.matchMedia('(orientation: portrait)').matches;

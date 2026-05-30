@@ -865,6 +865,11 @@ html.is-mobile .side-controls {
   gap: 8px;
 }
 
+html.is-mobile.is-question-active .side-controls,
+html.is-mobile.is-question-active .side-towers-button {
+  display: none;
+}
+
 html.is-mobile #topbar-controls {
   position: static;
   top: auto;
@@ -919,6 +924,32 @@ html.is-mobile .side-info .build-popup .choice-button {
   min-height: 48px;
 }
 
+html.is-mobile .side-info .build-popup.is-answer-popup {
+  position: relative;
+}
+
+html.is-mobile .side-info .build-popup.is-answer-popup .build-popup-header-compact {
+  display: block;
+  position: relative;
+  min-height: 0;
+  margin-bottom: 2px;
+}
+
+html.is-mobile .side-info .build-popup.is-answer-popup .build-popup-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  font-size: 16px;
+}
+
+html.is-mobile .side-info .build-popup.is-answer-popup .question-text {
+  gap: 6px;
+  padding-right: 30px;
+}
+
 html.is-mobile .side-towers-button {
   flex: 0 0 auto;
   min-height: 54px;
@@ -971,6 +1002,38 @@ html.is-mobile .bottom-panel .difficulty-selector-button {
   flex: 0 0 auto;
   width: 100%;
   max-width: none;
+  gap: 8px;
+  height: 72px;
+  padding: 6px 10px;
+}
+
+html.is-mobile .bottom-panel .tower-selector-image {
+  height: 56px;
+}
+
+html.is-mobile .bottom-panel .tower-selector-marker {
+  width: 38px;
+  height: 38px;
+  flex-basis: 38px;
+}
+
+html.is-mobile .bottom-panel .tower-selector-marker-airstrike {
+  box-shadow: inset 0 0 0 6px rgba(247, 240, 214, 0.08), inset 0 0 0 1px rgba(0, 0, 0, 0.78);
+}
+
+html.is-mobile .bottom-panel .tower-selector-marker-airstrike::before {
+  left: 6px;
+  right: 6px;
+}
+
+html.is-mobile .bottom-panel .tower-selector-marker-airstrike::after {
+  top: 6px;
+  bottom: 6px;
+}
+
+html.is-mobile .bottom-panel .tower-selector-label {
+  font-size: 11px;
+  line-height: 1.15;
 }
 
 html.is-mobile .drawer-backdrop {

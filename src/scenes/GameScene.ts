@@ -627,6 +627,7 @@ export class GameScene extends Phaser.Scene {
 
     private setQuestionPause(isPaused: boolean): void {
         this.questionPauseActive = isPaused;
+        this.mobileLayout?.setQuestionActive(isPaused);
         this.syncPauseState();
     }
 
@@ -814,6 +815,8 @@ export class GameScene extends Phaser.Scene {
         let state = 'idle';
 
         if (this.gameOver) {
+            text = '';
+        } else if (this.questionPauseActive && this.mobileLayout) {
             text = '';
         } else if (this.questionPauseActive) {
             text = 'Game paused while you answer the question.';
