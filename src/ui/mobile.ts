@@ -22,14 +22,12 @@ export function isMobileLayout(): boolean {
 /**
  * Reorganises the existing DOM into a landscape mobile layout: the Phaser map
  * fills the left of the screen and a single right-hand info panel hosts the HUD,
- * status messages, controls and the contextual question/answer panel. The tower
- * picker becomes a drawer that slides out from the right edge.
+ * status messages, controls, tower picker, and the contextual question/answer panel.
  */
 export class MobileLayout {
     private readonly frame = document.querySelector<HTMLElement>('#game-frame')!;
     private readonly sidePanel: HTMLElement;
     private readonly infoHost: HTMLElement;
-    private readonly drawerBackdrop: HTMLElement;
     private readonly towersButton: HTMLButtonElement;
 
     constructor() {
@@ -73,12 +71,10 @@ export class MobileLayout {
         if (status) {
             this.infoHost.append(status);
         }
-
-        // Backdrop closes the tower drawer when tapped.
-        this.drawerBackdrop = document.createElement('div');
-        this.drawerBackdrop.className = 'drawer-backdrop';
-        this.drawerBackdrop.hidden = true;
-        this.frame.append(this.drawerBackdrop);
+        const towerPanel = document.querySelector<HTMLElement>('[data-testid="bottom-panel"]');
+        if (towerPanel) {
+            this.infoHost.append(towerPanel);
+        }
 
         this.installOrientationWatch();
     }
@@ -87,7 +83,7 @@ export class MobileLayout {
         return this.infoHost;
     }
 
-    /** Wires the Towers launcher + backdrop to the constructed BottomPanel. */
+    /** Wires the Towers launcher to the constructed BottomPanel. */
     bindDrawer(controls: {
         toggle: () => void;
         close: () => void;
@@ -95,11 +91,9 @@ export class MobileLayout {
         onOpenChange: (listener: (open: boolean) => void) => void;
     }): void {
         this.towersButton.addEventListener('click', () => controls.toggle());
-        this.drawerBackdrop.addEventListener('click', () => controls.close());
         controls.onOpenChange((open) => {
             this.towersButton.setAttribute('aria-expanded', String(open));
             this.towersButton.classList.toggle('is-active', open);
-            this.drawerBackdrop.hidden = !open;
         });
     }
 
