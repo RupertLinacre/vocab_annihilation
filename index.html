@@ -5,6 +5,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vocab Annihilation</title>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-94373ZKHEE"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-94373ZKHEE');
+    </script>
 </head>
 
 <body>
@@ -85,15 +92,20 @@
                     <button class="icon-button panel-toggle" type="button" data-panel-toggle data-testid="panel-toggle"
                         aria-label="Collapse difficulty panel" aria-expanded="true">↓</button>
                     <p class="panel-row-title" data-testid="panel-row-title">Select which tower</p>
-                    <p class="panel-row-credit">
-                        Definitions adapted from Simple English Wiktionary, licensed under
-                        <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>;
-                        wording modified.</a>.
-                    </p>
                 </div>
                 <div class="panel-body" data-panel-body></div>
             </section>
         </div>
+        <footer class="site-footer">
+            <p>
+                Definitions adapted from Simple English Wiktionary, licensed under
+                <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>; wording modified.
+            </p>
+            <p>
+                Source code for this game
+                <a href="https://github.com/RupertLinacre/vocab_annihilation">here</a>.
+            </p>
+        </footer>
     </main>
     <script type="module" src="/src/main.ts"></script>
 </body>
