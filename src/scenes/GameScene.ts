@@ -524,8 +524,6 @@ export class GameScene extends Phaser.Scene {
         });
         keyboard?.on('keydown-G', () => { this.debug.grid = !this.debug.grid; });
         keyboard?.on('keydown-R', () => { this.debug.ranges = !this.debug.ranges; });
-        keyboard?.on('keydown-F', () => { this.debug.flow = !this.debug.flow; });
-        keyboard?.on('keydown-C', () => { this.debug.costs = !this.debug.costs; });
         keyboard?.on('keydown-L', () => { this.debug.los = !this.debug.los; });
     }
 
