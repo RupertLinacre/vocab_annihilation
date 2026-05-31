@@ -1,12 +1,19 @@
 import { createProjectile } from '../entities/Projectile';
 import { raycastGridCells } from '../map/LineOfSight';
-import type { EnemyState, GridPoint, MapGeometry, ProjectileState, Vec2 } from '../types';
+import type { EnemyState, GridPoint, MapGeometry, ProjectileState, ProjectileType, Vec2 } from '../types';
 import { Grid } from '../map/Grid';
+
+export interface ProjectileImpact {
+    x: number;
+    y: number;
+    type: ProjectileType;
+}
 
 export interface ProjectileUpdateResult {
     projectiles: ProjectileState[];
     kills: number;
     explosions: { x: number; y: number; radius: number; lifeMs: number }[];
+    impacts: ProjectileImpact[];
     hurtSounds: number;
     deathSounds: number;
 }
@@ -112,6 +119,7 @@ export class ProjectileSystem {
         const aliveProjectiles: ProjectileState[] = [];
         const spawnedFragments: ProjectileState[] = [];
         const explosions: { x: number; y: number; radius: number; lifeMs: number }[] = [];
+        const impacts: ProjectileImpact[] = [];
         let kills = 0;
         let hurtSounds = 0;
         let deathSounds = 0;
@@ -145,6 +153,7 @@ export class ProjectileSystem {
                     hurtSounds += result.hurtSounds;
                     deathSounds += result.deathSounds;
                 } else {
+                    impacts.push({ x: projectile.x, y: projectile.y, type: projectile.type });
                     hurtSounds += 1;
                     if (applyDamage(hit, projectile.damage)) {
                         kills += 1;
@@ -157,7 +166,7 @@ export class ProjectileSystem {
             aliveProjectiles.push(projectile);
         }
 
-        return { projectiles: [...aliveProjectiles, ...spawnedFragments], kills, explosions, hurtSounds, deathSounds };
+        return { projectiles: [...aliveProjectiles, ...spawnedFragments], kills, explosions, impacts, hurtSounds, deathSounds };
     }
 
     private updateMissileVelocity(projectile: ProjectileState, enemies: readonly EnemyState[], deltaMs: number): void {

@@ -75,6 +75,7 @@ export interface ProjectileState {
     explosionRadius?: number;
     fragmentCount?: number;
     fragmentDamage?: number;
+    emitAccumMs?: number;
 }
 
 export interface NormalizedVocabEntry {

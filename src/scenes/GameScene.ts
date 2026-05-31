@@ -11,6 +11,7 @@ import { generateMap, type GeneratedMap } from '../map/MapGenerator';
 import { buildFlowField, type FlowField } from '../pathfinding/FlowField';
 import { calculateTowerThreatCosts, createEmptyCostGrid, type CostGrid, getTowerStats } from '../pathfinding/ThreatMap';
 import { EnemySpawner, isGameDifficulty, type GameDifficulty } from '../systems/EnemySpawner';
+import { EffectsSystem } from '../systems/EffectsSystem';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
 import { TowerSystem, type AirstrikeImpactCell } from '../systems/TowerSystem';
 import { updateEnemyWallObjective } from '../systems/WallSystem';
@@ -181,6 +182,7 @@ export class GameScene extends Phaser.Scene {
     private spawner!: EnemySpawner;
     private towerSystem = new TowerSystem();
     private projectileSystem = new ProjectileSystem();
+    private effects = new EffectsSystem();
     private baseSprite!: Phaser.GameObjects.Image;
     private towers: TowerState[] = [];
     private enemies: EnemyState[] = [];
@@ -329,6 +331,9 @@ export class GameScene extends Phaser.Scene {
         this.projectiles.push(...towerResult.projectiles);
         this.kills += towerResult.kills;
         this.explosions.push(...towerResult.explosions);
+        for (const explosion of towerResult.explosions) {
+            this.effects.spawnExplosion(explosion.x, explosion.y, explosion.radius, false);
+        }
         this.playRepeatedSound(SOUND_KEYS.pop, towerResult.shotsFired, 0.18);
         this.playRepeatedSound(SOUND_KEYS.owHurt, towerResult.hurtSounds, 0.2);
         this.playRepeatedSound(SOUND_KEYS.owDeath, towerResult.deathSounds, 0.28);
@@ -346,6 +351,14 @@ export class GameScene extends Phaser.Scene {
         this.projectiles = projectileResult.projectiles;
         this.kills += projectileResult.kills;
         this.explosions.push(...projectileResult.explosions);
+        for (const explosion of projectileResult.explosions) {
+            this.effects.spawnExplosion(explosion.x, explosion.y, explosion.radius, false);
+        }
+        for (const impact of projectileResult.impacts) {
+            this.effects.spawnImpact(impact.x, impact.y, impact.type);
+        }
+        this.effects.emitTrails(this.projectiles, deltaMs);
+        this.effects.update(deltaMs);
         this.playRepeatedSound(SOUND_KEYS.owHurt, projectileResult.hurtSounds, 0.2);
         this.playRepeatedSound(SOUND_KEYS.owDeath, projectileResult.deathSounds, 0.28);
         this.enemies = this.enemies.filter((enemy) => enemy.health > 0);
@@ -442,6 +455,7 @@ export class GameScene extends Phaser.Scene {
             const result = this.towerSystem.detonateAirstrike(airstrike.target, this.enemies, this.generatedMap.grid, GAME_CONFIG.map);
             this.kills += result.kills;
             this.explosions.push(result.explosion);
+            this.effects.spawnExplosion(result.explosion.x, result.explosion.y, result.explosion.radius, true);
             this.airstrikeImpacts.push(...result.airstrikeImpacts.map((impact) => ({
                 ...impact,
                 lifeMs: AIRSTRIKE_IMPACT_LIFE_MS,
@@ -915,6 +929,7 @@ export class GameScene extends Phaser.Scene {
         this.renderTowerRanges();
         this.renderFlowDebug();
         this.renderTowers();
+        this.effects.render(this.graphics);
         this.renderProjectiles();
         this.renderEnemies();
         this.renderExplosions();
