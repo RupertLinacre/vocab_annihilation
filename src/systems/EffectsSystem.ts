@@ -143,7 +143,7 @@ export class EffectsSystem {
         let interval: number;
         switch (projectile.type) {
             case 'missile':
-                interval = 16;
+                interval = 16 / (projectile.trailScale ?? 1);
                 break;
             case 'cluster':
                 interval = 20;
@@ -177,13 +177,14 @@ export class EffectsSystem {
 
         switch (projectile.type) {
             case 'missile': {
+                const trailScale = projectile.trailScale ?? 1;
                 // Hot exhaust flame right at the nozzle.
                 this.spawn(
                     tailX,
                     tailY,
                     dirX * -24 + (Math.random() - 0.5) * 24,
                     dirY * -24 + (Math.random() - 0.5) * 24,
-                    170,
+                    170 * trailScale,
                     4.2,
                     1.2,
                     0xffe28a,
@@ -200,7 +201,7 @@ export class EffectsSystem {
                     tailY + (Math.random() - 0.5) * 3,
                     dirX * -10 + (Math.random() - 0.5) * 14,
                     dirY * -10 + (Math.random() - 0.5) * 14 - 6,
-                    560,
+                    560 * trailScale,
                     2.6,
                     8.5,
                     0xc8c2b6,

@@ -74,6 +74,8 @@ export interface ProjectileState {
     targetId?: number;
     turnRate?: number;
     speed?: number;
+    homingDelayMs?: number;
+    trailScale?: number;
     explosionRadius?: number;
     fragmentCount?: number;
     fragmentDamage?: number;

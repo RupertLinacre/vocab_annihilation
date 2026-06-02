@@ -4,6 +4,7 @@ import { isWallTower, selectTowerTarget } from '../entities/Tower';
 import { cellCenter, Grid, worldToGrid } from '../map/Grid';
 import type { FlowField } from '../pathfinding/FlowField';
 import { createProjectile } from '../entities/Projectile';
+import { TOWER_STATS } from '../config/gameConfig';
 
 export interface TowerUpdateResult {
     projectiles: ProjectileState[];
@@ -78,6 +79,11 @@ function clamp(value: number, min: number, max: number): number {
     return Math.max(min, Math.min(max, value));
 }
 
+function missileUpgradeProgress(tower: TowerState): number {
+    const maxIndex = Math.max(1, TOWER_STATS.missile.length - 1);
+    return clamp((tower.level - 1) / maxIndex, 0, 1);
+}
+
 function calculateAirstrikeFalloff(x: number, y: number, center: { x: number; y: number }, explosionRadius: number, killHalfSize: number): number {
     const outsideKillBox = Math.max(0, Math.max(Math.abs(x - center.x), Math.abs(y - center.y)) - killHalfSize);
     const normalizedDistance = explosionRadius <= 0 ? 0 : Math.min(1, outsideKillBox / explosionRadius);
@@ -139,12 +145,17 @@ export class TowerSystem {
                 const count = stats.missileCount ?? 1;
                 const speed = stats.missileSpeed ?? 180;
                 const baseAngle = Math.atan2(targetDirection.y, targetDirection.x);
+                const upgradeProgress = missileUpgradeProgress(tower);
+                const trailScale = 1 + upgradeProgress;
+                const spread = count > 1 ? 0.2 : 0;
                 for (let index = 0; index < count; index += 1) {
-                    const angle = baseAngle + (index - (count - 1) / 2) * 0.18;
+                    const angle = baseAngle + (index - (count - 1) / 2) * spread;
                     const projectile = createProjectile(this.nextProjectileId++, 'missile', center.x, center.y, Math.cos(angle) * speed * 0.55, Math.sin(angle) * speed * 0.55, stats.damage, 6, 3600);
                     projectile.targetId = target.id;
                     projectile.speed = speed;
                     projectile.turnRate = stats.missileTurnRate ?? 2.3;
+                    projectile.homingDelayMs = count > 1 ? 160 : 0;
+                    projectile.trailScale = trailScale;
                     projectiles.push(projectile);
                 }
             } else {
