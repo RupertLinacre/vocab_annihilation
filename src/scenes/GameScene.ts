@@ -888,13 +888,28 @@ export class GameScene extends Phaser.Scene {
 
     private updateHud(): void {
         const healthPercent = Math.max(0, Math.min(1, this.baseHealth / GAME_CONFIG.baseHealth));
+        const baseHealthColor = this.formatBaseHealthColor(healthPercent);
+        const hud = document.querySelector<HTMLElement>('#hud')!;
         document.querySelector('[data-stat="health"]')!.textContent = `${Math.ceil(this.baseHealth)}`;
         document.querySelector<HTMLElement>('[data-stat="base-fill"]')!.style.transform = `scaleX(${healthPercent})`;
         document.querySelector<HTMLElement>('[data-stat="base-meter"]')!.setAttribute('aria-valuenow', `${Math.ceil(this.baseHealth)}`);
+        hud.style.setProperty('--base-health-color', baseHealthColor);
         document.querySelector('[data-stat="time"]')!.textContent = this.formatTime(this.elapsedMs);
         document.querySelector('[data-stat="kills"]')!.textContent = `${this.kills}`;
         const accuracy = this.answered === 0 ? '0/0' : `${this.correctAnswers}/${this.answered} (${Math.round((this.correctAnswers / this.answered) * 100)}%)`;
         document.querySelector('[data-stat="accuracy"]')!.textContent = accuracy;
+    }
+
+    private formatBaseHealthColor(healthPercent: number): string {
+        const red = { r: 232, g: 93, b: 117 };
+        const amber = { r: 243, g: 182, b: 75 };
+        const green = { r: 79, g: 180, b: 119 };
+        const start = healthPercent < 0.5 ? red : amber;
+        const end = healthPercent < 0.5 ? amber : green;
+        const mix = healthPercent < 0.5 ? healthPercent * 2 : (healthPercent - 0.5) * 2;
+        const channel = (from: number, to: number) => Math.round(from + (to - from) * mix);
+
+        return `rgb(${channel(start.r, end.r)}, ${channel(start.g, end.g)}, ${channel(start.b, end.b)})`;
     }
 
     private flashBaseDamage(): void {

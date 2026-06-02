@@ -882,9 +882,32 @@ html.is-mobile .side-hud {
 
 html.is-mobile #hud {
   flex: 1 1 auto;
-  flex-wrap: wrap;
-  gap: 6px 12px;
+  flex-wrap: nowrap;
+  gap: 7px;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 7px 8px;
   font-size: 12px;
+}
+
+html.is-mobile #hud > span {
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 3px;
+}
+
+html.is-mobile #hud .base-status,
+html.is-mobile #hud .base-status strong {
+  color: var(--base-health-color, var(--ink));
+}
+
+html.is-mobile #hud .base-status {
+  min-width: 0;
+  font-weight: 800;
+}
+
+html.is-mobile #hud .base-meter {
+  display: none;
 }
 
 html.is-mobile .side-info {
@@ -919,9 +942,19 @@ html.is-mobile .side-info .build-popup .popup-definition {
   font-size: 16px;
 }
 
+html.is-mobile .side-info .build-popup .answer-grid,
+html.is-mobile .side-info .build-popup .answer-popup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 html.is-mobile .side-info .build-popup .choice-button {
-  flex: 1 1 100%;
-  min-height: 48px;
+  flex: 1 1 96px;
+  min-height: 36px;
+  padding: 6px 8px;
+  font-size: 13px;
+  line-height: 1.15;
 }
 
 html.is-mobile .side-info .build-popup.is-answer-popup {
@@ -932,7 +965,7 @@ html.is-mobile .side-info .build-popup.is-answer-popup .build-popup-header-compa
   display: block;
   position: relative;
   min-height: 0;
-  margin-bottom: 2px;
+  margin-bottom: 0;
 }
 
 html.is-mobile .side-info .build-popup.is-answer-popup .build-popup-close {
@@ -946,8 +979,13 @@ html.is-mobile .side-info .build-popup.is-answer-popup .build-popup-close {
 }
 
 html.is-mobile .side-info .build-popup.is-answer-popup .question-text {
-  gap: 6px;
+  gap: 4px;
   padding-right: 30px;
+}
+
+html.is-mobile .side-info .build-popup.is-answer-popup .popup-definition {
+  margin-top: -8px;
+  min-height: 24px;
 }
 
 html.is-mobile .side-towers-button {
@@ -1088,4 +1126,3 @@ html.is-mobile.is-portrait::after {
   color: var(--ink);
   background: #0e1914;
 }
-
