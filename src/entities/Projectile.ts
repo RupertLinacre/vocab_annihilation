@@ -13,5 +13,6 @@ export function createProjectile(id: number, type: ProjectileType, x: number, y:
         damage,
         radius,
         lifeMs,
+        maxLifeMs: lifeMs,
     };
 }

@@ -1126,19 +1126,77 @@ export class GameScene extends Phaser.Scene {
 
     private renderProjectiles(): void {
         for (const projectile of this.projectiles) {
-            const color = projectile.type === 'missile' ? 0xbde0fe : projectile.type === 'cluster' ? 0xf15bb5 : projectile.type === 'fragment' ? 0xffe66d : 0xf7f0d6;
-            this.graphics.fillStyle(color, 1);
             if (projectile.type === 'missile') {
                 const angle = Math.atan2(projectile.vy, projectile.vx);
+                this.graphics.fillStyle(0xbde0fe, 1);
                 this.graphics.save();
                 this.graphics.translateCanvas(projectile.x, projectile.y);
                 this.graphics.rotateCanvas(angle);
                 this.graphics.fillTriangle(8, 0, -6, -5, -6, 5);
                 this.graphics.restore();
+            } else if (projectile.type === 'fragment') {
+                const color = this.fragmentHeatColor(projectile);
+                const heat = Math.max(0, Math.min(1, projectile.lifeMs / (projectile.maxLifeMs ?? 620)));
+                this.graphics.lineStyle(2, color, 0.7);
+                this.graphics.beginPath();
+                this.graphics.moveTo(projectile.previousX, projectile.previousY);
+                this.graphics.lineTo(projectile.x, projectile.y);
+                this.graphics.strokePath();
+                if (heat > 0.35) {
+                    this.graphics.fillStyle(color, 0.22);
+                    this.graphics.fillCircle(projectile.x, projectile.y, projectile.radius * 2.2);
+                }
+                this.graphics.fillStyle(color, 1);
+                this.graphics.fillCircle(projectile.x, projectile.y, projectile.radius * (0.75 + heat * 0.55));
+            } else if (projectile.type === 'cluster') {
+                this.graphics.fillStyle(0xf15bb5, 0.24);
+                this.graphics.fillCircle(projectile.x, projectile.y, projectile.radius * 2.2);
+                this.graphics.fillStyle(0xffc2f4, 1);
+                this.graphics.fillCircle(projectile.x, projectile.y, projectile.radius);
+            } else if (projectile.visualType === 'spray') {
+                const angle = Math.atan2(projectile.vy, projectile.vx);
+                this.graphics.lineStyle(2, 0x42f5ff, 0.42);
+                this.graphics.beginPath();
+                this.graphics.moveTo(projectile.previousX, projectile.previousY);
+                this.graphics.lineTo(projectile.x, projectile.y);
+                this.graphics.strokePath();
+                this.graphics.save();
+                this.graphics.translateCanvas(projectile.x, projectile.y);
+                this.graphics.rotateCanvas(angle);
+                this.graphics.fillStyle(0xff4fd8, 0.24);
+                this.graphics.fillEllipse(0, 0, projectile.radius * 4.2, projectile.radius * 2.4);
+                this.graphics.fillStyle(0xe7ffff, 1);
+                this.graphics.fillEllipse(0, 0, projectile.radius * 2.1, projectile.radius * 1.15);
+                this.graphics.restore();
             } else {
+                const speed = Math.hypot(projectile.vx, projectile.vy) || 1;
+                const dirX = projectile.vx / speed;
+                const dirY = projectile.vy / speed;
+                this.graphics.lineStyle(3, 0xfff7ce, 0.64);
+                this.graphics.beginPath();
+                this.graphics.moveTo(projectile.x - dirX * 20, projectile.y - dirY * 20);
+                this.graphics.lineTo(projectile.x, projectile.y);
+                this.graphics.strokePath();
+                this.graphics.fillStyle(0xfffdf3, 0.28);
+                this.graphics.fillCircle(projectile.x, projectile.y, projectile.radius * 2.1);
+                this.graphics.fillStyle(0xf7f0d6, 1);
                 this.graphics.fillCircle(projectile.x, projectile.y, projectile.radius);
             }
         }
+    }
+
+    private fragmentHeatColor(projectile: ProjectileState): number {
+        const heat = Math.max(0, Math.min(1, projectile.lifeMs / (projectile.maxLifeMs ?? 620)));
+        if (heat > 0.72) {
+            return 0xffffff;
+        }
+        if (heat > 0.44) {
+            return 0xff8a16;
+        }
+        if (heat > 0.18) {
+            return 0xd82712;
+        }
+        return 0x0b0908;
     }
 
     private renderExplosions(): void {

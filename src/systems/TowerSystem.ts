@@ -131,7 +131,9 @@ export class TowerSystem {
                 for (let index = 0; index < pelletCount; index += 1) {
                     const t = pelletCount === 1 ? 0.5 : index / (pelletCount - 1);
                     const angle = baseAngle + (t - 0.5) * spread;
-                    projectiles.push(createProjectile(this.nextProjectileId++, 'bullet', center.x, center.y, Math.cos(angle) * speed, Math.sin(angle) * speed, stats.damage, 3.4, 1250));
+                    const projectile = createProjectile(this.nextProjectileId++, 'bullet', center.x, center.y, Math.cos(angle) * speed, Math.sin(angle) * speed, stats.damage, 3.4, 1250);
+                    projectile.visualType = 'spray';
+                    projectiles.push(projectile);
                 }
             } else if (tower.type === 'missile') {
                 const count = stats.missileCount ?? 1;

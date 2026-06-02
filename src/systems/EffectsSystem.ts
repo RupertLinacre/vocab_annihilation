@@ -64,6 +64,10 @@ function lerpColor(a: number, b: number, t: number): number {
     return (r << 16) | (g << 8) | bl;
 }
 
+function randomBetween(min: number, max: number): number {
+    return min + Math.random() * (max - min);
+}
+
 export interface ExplosionEffect {
     x: number;
     y: number;
@@ -145,10 +149,10 @@ export class EffectsSystem {
                 interval = 20;
                 break;
             case 'fragment':
-                interval = 28;
+                interval = 16;
                 break;
             default:
-                interval = 34;
+                interval = projectile.visualType === 'spray' ? 12 : 18;
                 break;
         }
 
@@ -168,6 +172,8 @@ export class EffectsSystem {
         // Spawn slightly behind the projectile so the trail streams from its tail.
         const tailX = projectile.x - dirX * (projectile.radius + 2);
         const tailY = projectile.y - dirY * (projectile.radius + 2);
+        const sideX = -dirY;
+        const sideY = dirX;
 
         switch (projectile.type) {
             case 'missile': {
@@ -227,39 +233,113 @@ export class EffectsSystem {
                 break;
             }
             case 'fragment': {
+                const heat = Math.max(0, Math.min(1, projectile.lifeMs / (projectile.maxLifeMs ?? 620)));
+                const hotColor = heat > 0.66 ? 0xffffff : heat > 0.38 ? 0xff8a16 : heat > 0.16 ? 0xd82712 : 0x15100d;
+                const coolColor = heat > 0.66 ? 0xffb32b : heat > 0.38 ? 0xe13012 : heat > 0.16 ? 0x220d08 : 0x050403;
                 this.spawn(
                     tailX,
                     tailY,
-                    (Math.random() - 0.5) * 30,
-                    (Math.random() - 0.5) * 30,
-                    160,
-                    2.2,
-                    0.4,
-                    0xffe66d,
-                    0xff7a1a,
-                    0.8,
+                    dirX * randomBetween(-18, -4) + (Math.random() - 0.5) * 18,
+                    dirY * randomBetween(-18, -4) + (Math.random() - 0.5) * 18,
+                    190,
+                    2.8,
+                    0.5,
+                    hotColor,
+                    coolColor,
+                    0.9,
                     0,
                     2,
                     0,
-                    false,
+                    heat > 0.25,
                 );
+                if (heat < 0.35) {
+                    this.spawn(
+                        tailX + (Math.random() - 0.5) * 3,
+                        tailY + (Math.random() - 0.5) * 3,
+                        dirX * -8 + (Math.random() - 0.5) * 12,
+                        dirY * -8 + (Math.random() - 0.5) * 12 - 4,
+                        300,
+                        1.6,
+                        5.8,
+                        0x2b241f,
+                        0x050403,
+                        0.45,
+                        0,
+                        1.1,
+                        -4,
+                        false,
+                    );
+                }
                 break;
             }
             default: {
-                // Faint tracer sparks for bullets; kept low-rate to stay cheap.
+                if (projectile.visualType === 'spray') {
+                    const sideOffset = randomBetween(-7, 7);
+                    const color = Math.random() > 0.5 ? 0x42f5ff : 0xff4fd8;
+                    this.spawn(
+                        tailX + sideX * sideOffset,
+                        tailY + sideY * sideOffset,
+                        dirX * randomBetween(-40, -16) + sideX * randomBetween(-32, 32),
+                        dirY * randomBetween(-40, -16) + sideY * randomBetween(-32, 32),
+                        260,
+                        3.1,
+                        0.4,
+                        0xffffff,
+                        color,
+                        0.75,
+                        0,
+                        2.8,
+                        0,
+                        true,
+                    );
+                    this.spawn(
+                        tailX - dirX * 4,
+                        tailY - dirY * 4,
+                        sideX * randomBetween(-16, 16),
+                        sideY * randomBetween(-16, 16),
+                        140,
+                        5.4,
+                        1.2,
+                        0x6ffcff,
+                        0xff5bd6,
+                        0.18,
+                        0,
+                        1.8,
+                        0,
+                        true,
+                    );
+                    break;
+                }
+                // Bright tracer flare for bullet tower rounds.
+                this.spawn(
+                    tailX - dirX * 8,
+                    tailY - dirY * 8,
+                    dirX * -28 + (Math.random() - 0.5) * 12,
+                    dirY * -28 + (Math.random() - 0.5) * 12,
+                    165,
+                    4.4,
+                    0.4,
+                    0xffffff,
+                    0xffb300,
+                    0.9,
+                    0,
+                    2,
+                    0,
+                    true,
+                );
                 this.spawn(
                     tailX,
                     tailY,
-                    (Math.random() - 0.5) * 16,
-                    (Math.random() - 0.5) * 16,
-                    120,
-                    1.7,
-                    0.3,
+                    (Math.random() - 0.5) * 22,
+                    (Math.random() - 0.5) * 22,
+                    95,
+                    1.5,
+                    0.2,
                     0xfff3c4,
-                    0xffcf6b,
-                    0.55,
+                    0xff6f1a,
+                    0.7,
                     0,
-                    2,
+                    2.5,
                     0,
                     false,
                 );

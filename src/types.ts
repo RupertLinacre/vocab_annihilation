@@ -60,6 +60,7 @@ export interface EnemyState {
 export interface ProjectileState {
     id: number;
     type: ProjectileType;
+    visualType?: 'bullet' | 'spray';
     x: number;
     y: number;
     previousX: number;
@@ -69,6 +70,7 @@ export interface ProjectileState {
     damage: number;
     radius: number;
     lifeMs: number;
+    maxLifeMs?: number;
     targetId?: number;
     turnRate?: number;
     speed?: number;
