@@ -2,7 +2,7 @@ export type TerrainType = 'tree' | 'grass' | 'tarmac';
 
 export type TowerDifficulty = 'easy' | 'medium' | 'hard' | 'veryHard';
 
-export type TowerType = 'easy' | 'spray' | 'missile' | 'cluster' | 'wall' | 'airstrike';
+export type TowerType = 'easy' | 'spray' | 'missile' | 'flamethrower' | 'cluster' | 'wall' | 'airstrike';
 
 export type EnemyType = 'scout' | 'grunt' | 'tank';
 
@@ -34,6 +34,7 @@ export interface TowerState {
     health?: number;
     maxHealth?: number;
     baseTerrain?: TerrainType;
+    flameAngleRadians?: number;
 }
 
 export interface EnemyState {
@@ -55,6 +56,10 @@ export interface EnemyState {
     panicStartDistance: number;
     isStuck: boolean;
     lastMoveSpeed: number;
+    burnMs?: number;
+    burnDamagePerSecond?: number;
+    burnSpreadRadius?: number;
+    burnSpreadCooldownMs?: number;
 }
 
 export interface ProjectileState {

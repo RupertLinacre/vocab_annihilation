@@ -1,11 +1,12 @@
-import type { ProjectileState, ProjectileType } from '../types';
+import type { EnemyState, ProjectileState, ProjectileType } from '../types';
+import type { FlameJet } from './TowerSystem';
 
 // Lightweight, allocation-free particle system rendered in immediate mode into the
 // scene's shared Graphics object. A fixed pool plus a free-list keeps per-frame work
 // bounded and avoids creating Phaser GameObjects per particle, so heavy projectile
 // activity stays cheap.
 
-const MAX_PARTICLES = 520;
+const MAX_PARTICLES = 1400;
 
 interface Particle {
     active: boolean;
@@ -133,6 +134,153 @@ export class EffectsSystem {
         for (const projectile of projectiles) {
             this.emitProjectileTrail(projectile, deltaMs);
         }
+    }
+
+    emitFlameJets(flameJets: readonly FlameJet[], deltaMs: number): void {
+        if (this.free.length === 0) {
+            return;
+        }
+        for (const jet of flameJets) {
+            const particleBudgetFloat = (deltaMs / 4.5) * jet.intensity;
+            const particleBudget = Math.max(2, Math.floor(particleBudgetFloat));
+            const extra = Math.random() < particleBudgetFloat % 1 ? 1 : 0;
+            for (let index = 0; index < particleBudget + extra; index += 1) {
+                this.emitFlameParticle(jet);
+                if (index % 2 === 0) {
+                    this.emitFlameCoreParticle(jet);
+                }
+                if (this.free.length === 0) {
+                    return;
+                }
+            }
+        }
+    }
+
+    emitBurningEnemies(enemies: readonly EnemyState[], deltaMs: number): void {
+        if (this.free.length === 0) {
+            return;
+        }
+        for (const enemy of enemies) {
+            if ((enemy.burnMs ?? 0) <= 0 || enemy.health <= 0) {
+                continue;
+            }
+            const count = Math.random() < Math.min(0.9, deltaMs / 28) ? 1 : 0;
+            for (let index = 0; index < count; index += 1) {
+                const angle = Math.random() * Math.PI * 2;
+                const offset = Math.random() * enemy.radius * 0.75;
+                this.spawn(
+                    enemy.x + Math.cos(angle) * offset,
+                    enemy.y + Math.sin(angle) * offset,
+                    randomBetween(-10, 10),
+                    randomBetween(-24, -8),
+                    randomBetween(210, 360),
+                    randomBetween(2.2, 4.2),
+                    0.4,
+                    Math.random() > 0.35 ? 0xfff1a8 : 0xff7a18,
+                    0xd42008,
+                    0.78,
+                    0,
+                    1.9,
+                    -18,
+                    true,
+                );
+            }
+            if (Math.random() < Math.min(0.24, deltaMs / 90)) {
+                this.spawn(
+                    enemy.x + randomBetween(-enemy.radius * 0.5, enemy.radius * 0.5),
+                    enemy.y + randomBetween(-enemy.radius * 0.5, enemy.radius * 0.5),
+                    randomBetween(-8, 8),
+                    randomBetween(-18, -6),
+                    randomBetween(360, 620),
+                    2,
+                    7,
+                    0x4a372e,
+                    0x120c09,
+                    0.28,
+                    0,
+                    1.2,
+                    -10,
+                    false,
+                );
+            }
+        }
+    }
+
+    private emitFlameParticle(jet: FlameJet): void {
+        const angle = jet.angle + randomBetween(-jet.arcRadians * 0.24, jet.arcRadians * 0.24);
+        const distanceT = Math.random() ** 0.48;
+        const distance = randomBetween(8, jet.range * distanceT);
+        const dirX = Math.cos(angle);
+        const dirY = Math.sin(angle);
+        const sideX = -dirY;
+        const sideY = dirX;
+        const width = lerp(1.2, 7.5, distance / Math.max(1, jet.range));
+        const x = jet.x + dirX * distance + sideX * randomBetween(-width, width);
+        const y = jet.y + dirY * distance + sideY * randomBetween(-width, width);
+        const speed = randomBetween(54, 128) * jet.intensity;
+        const heat = 1 - distance / Math.max(1, jet.range);
+        const hot = heat > 0.48;
+        this.spawn(
+            x,
+            y,
+            dirX * speed + sideX * randomBetween(-8, 8),
+            dirY * speed + sideY * randomBetween(-8, 8) - randomBetween(0, 12),
+            randomBetween(110, 220),
+            hot ? randomBetween(4.2, 7.2) : randomBetween(2.6, 5.4),
+            randomBetween(0.4, 1.4),
+            hot ? 0xfff9d8 : 0xff9a20,
+            hot ? 0xff7420 : 0xc72208,
+            hot ? 0.88 : 0.68,
+            0,
+            3.2,
+            -10,
+            true,
+        );
+        if (Math.random() < 0.08) {
+            this.spawn(
+                x - dirX * 5,
+                y - dirY * 5,
+                dirX * randomBetween(18, 36) + sideX * randomBetween(-5, 5),
+                dirY * randomBetween(18, 36) + sideY * randomBetween(-5, 5) - 8,
+                randomBetween(360, 540),
+                randomBetween(1.6, 3.2),
+                randomBetween(6, 10),
+                0x5b473b,
+                0x18100d,
+                0.18,
+                0,
+                1.35,
+                -12,
+                false,
+            );
+        }
+    }
+
+    private emitFlameCoreParticle(jet: FlameJet): void {
+        const angle = jet.angle + randomBetween(-jet.arcRadians * 0.08, jet.arcRadians * 0.08);
+        const distance = randomBetween(6, jet.range * (0.18 + Math.random() * 0.78));
+        const dirX = Math.cos(angle);
+        const dirY = Math.sin(angle);
+        const sideX = -dirY;
+        const sideY = dirX;
+        const width = lerp(0.4, 3.2, distance / Math.max(1, jet.range));
+        const speed = randomBetween(96, 170) * jet.intensity;
+        this.spawn(
+            jet.x + dirX * distance + sideX * randomBetween(-width, width),
+            jet.y + dirY * distance + sideY * randomBetween(-width, width),
+            dirX * speed + sideX * randomBetween(-3, 3),
+            dirY * speed + sideY * randomBetween(-3, 3),
+            randomBetween(75, 145),
+            randomBetween(2.2, 4.4),
+            0.25,
+            Math.random() > 0.42 ? 0xf8ffff : 0xa9ecff,
+            0xffdf75,
+            0.78,
+            0,
+            4.4,
+            0,
+            true,
+        );
     }
 
     private emitProjectileTrail(projectile: ProjectileState, deltaMs: number): void {

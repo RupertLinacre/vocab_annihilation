@@ -629,6 +629,12 @@ body {
   pointer-events: none;
 }
 
+.tower-selector-marker-flamethrower {
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, #ffb047 0 16%, #ff3030 17% 58%, #4a0f09 60% 100%);
+  box-shadow: inset 0 0 0 2px rgba(255, 241, 168, 0.28), 0 0 14px rgba(255, 74, 18, 0.36);
+}
+
 .tower-selector-marker-airstrike {
   position: relative;
   border: 2px solid rgba(247, 240, 214, 0.34);

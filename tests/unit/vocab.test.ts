@@ -31,13 +31,17 @@ describe('vocabulary questions and upgrades', () => {
         expect(getUpgradeQuestionDifficulty({ type: 'missile' }, 5)).toBe('veryHard');
         expect(getUpgradeQuestionDifficulty({ type: 'missile' }, 16)).toBe('veryHard');
 
+        expect(getUpgradeQuestionDifficulty({ type: 'flamethrower' }, 2)).toBe('hard');
+        expect(getUpgradeQuestionDifficulty({ type: 'flamethrower' }, 5)).toBe('veryHard');
+        expect(getUpgradeQuestionDifficulty({ type: 'flamethrower' }, 16)).toBe('veryHard');
+
         expect(getUpgradeQuestionDifficulty({ type: 'cluster' }, 2)).toBe('veryHard');
         expect(getUpgradeQuestionDifficulty({ type: 'cluster' }, 8)).toBe('veryHard');
         expect(getUpgradeQuestionDifficulty({ type: 'cluster' }, 16)).toBe('veryHard');
     });
 
     it('allows combat towers to upgrade through level 16', () => {
-        const combatTowerTypes = ['easy', 'spray', 'missile', 'cluster'] as const;
+        const combatTowerTypes = ['easy', 'spray', 'missile', 'flamethrower', 'cluster'] as const;
 
         for (const towerType of combatTowerTypes) {
             const tower = createTower(1, 0, 0, towerType);

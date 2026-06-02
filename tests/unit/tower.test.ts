@@ -41,6 +41,27 @@ describe('tower target selection', () => {
         expect(calculateTotalTowerDamagePerSecond([easy, spray, cluster])).toBeCloseTo(13 / 0.66 + 24 + 49 / 1.6);
     });
 
+    it('rotates flamethrowers and gives monsters infectious burns', () => {
+        const grid = new Grid(8, 4, 'grass');
+        const base = { x: 7, y: 1 };
+        const flow = buildFlowField(grid, base, createEmptyCostGrid(grid));
+        const center = cellCenter({ x: 2, y: 1 }, GAME_CONFIG.map);
+        const target = createEnemy(1, 'grunt', center.x + 80, center.y);
+        const nearby = createEnemy(2, 'grunt', target.x + 20, target.y);
+        const tower: TowerState = { id: 1, gridX: 2, gridY: 1, type: 'flamethrower', level: 1, cooldownMs: 0, flameAngleRadians: 0 };
+
+        const result = new TowerSystem().update(100, [tower], [target, nearby], grid, GAME_CONFIG.map, flow);
+
+        expect(result.projectiles).toHaveLength(0);
+        expect(result.flameJets).toHaveLength(1);
+        expect(tower.flameAngleRadians).toBeGreaterThan(0);
+        expect(target.health).toBeLessThan(target.maxHealth);
+        expect(target.burnMs).toBeGreaterThan(0);
+
+        new TowerSystem().update(300, [], [target, nearby], grid, GAME_CONFIG.map, flow);
+        expect(nearby.burnMs).toBeGreaterThan(0);
+    });
+
     it('creates non-upgradable utility options with no combat DPS', () => {
         const wall = createTower(1, 1, 1, 'wall');
         const airstrike = createTower(2, 2, 1, 'airstrike');

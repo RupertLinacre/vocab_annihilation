@@ -45,6 +45,7 @@ export const TOWER_BUILD_DIFFICULTIES: Record<TowerType, TowerDifficulty> = {
     easy: 'easy',
     spray: 'medium',
     missile: 'hard',
+    flamethrower: 'hard',
     cluster: 'veryHard',
     wall: 'veryHard',
     airstrike: 'veryHard',
@@ -54,6 +55,7 @@ export const TOWER_UPGRADE_DIFFICULTIES: Record<TowerType, TowerDifficulty[]> = 
     easy: ['easy', 'easy', 'medium', 'medium', 'hard', 'hard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard'],
     spray: ['medium', 'medium', 'hard', 'hard', 'hard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard'],
     missile: ['hard', 'hard', 'hard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard'],
+    flamethrower: ['hard', 'hard', 'hard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard'],
     cluster: ['veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard', 'veryHard'],
     wall: [],
     airstrike: [],
@@ -63,6 +65,7 @@ export const TOWER_LABELS: Record<TowerType, string> = {
     easy: 'Easy Bullet Tower',
     spray: 'Medium Spray Tower',
     missile: 'Hard Missile Tower',
+    flamethrower: 'Hard Flamethrower Tower',
     cluster: 'Very Hard Cluster Tower',
     wall: 'Very Hard Wall',
     airstrike: 'Very Hard Airstrike',
@@ -87,6 +90,11 @@ export interface TowerLevelStats {
     missileCount?: number;
     missileSpeed?: number;
     missileTurnRate?: number;
+    flameRotateRate?: number;
+    flameArcRadians?: number;
+    burnDamagePerSecond?: number;
+    burnDurationMs?: number;
+    burnSpreadRadius?: number;
     explosionRadius?: number;
     fragmentCount?: number;
     fragmentDamage?: number;
@@ -148,6 +156,24 @@ export const TOWER_STATS: Record<TowerType, TowerLevelStats[]> = {
         { range: 694, cooldownMs: 725, damage: 48, missileCount: 8, missileSpeed: 600, missileTurnRate: 7.1, threat: 40.2 },
         { range: 746, cooldownMs: 650, damage: 50, missileCount: 8, missileSpeed: 640, missileTurnRate: 7.55, threat: 44.3 },
     ],
+    flamethrower: [
+        { range: 112, cooldownMs: 1000, damage: 14, flameRotateRate: 0.9, flameArcRadians: 0.32, burnDamagePerSecond: 5, burnDurationMs: 1700, burnSpreadRadius: 34, threat: 5.0 },
+        { range: 126, cooldownMs: 1000, damage: 16, flameRotateRate: 1.02, flameArcRadians: 0.32, burnDamagePerSecond: 5.8, burnDurationMs: 1750, burnSpreadRadius: 35, threat: 6.2 },
+        { range: 140, cooldownMs: 1000, damage: 18, flameRotateRate: 1.14, flameArcRadians: 0.33, burnDamagePerSecond: 6.4, burnDurationMs: 1800, burnSpreadRadius: 36, threat: 7.5 },
+        { range: 156, cooldownMs: 1000, damage: 20, flameRotateRate: 1.28, flameArcRadians: 0.33, burnDamagePerSecond: 7.1, burnDurationMs: 1850, burnSpreadRadius: 37, threat: 9.0 },
+        { range: 172, cooldownMs: 1000, damage: 22, flameRotateRate: 1.42, flameArcRadians: 0.34, burnDamagePerSecond: 7.8, burnDurationMs: 1900, burnSpreadRadius: 38, threat: 10.7 },
+        { range: 188, cooldownMs: 1000, damage: 24, flameRotateRate: 1.56, flameArcRadians: 0.34, burnDamagePerSecond: 8.6, burnDurationMs: 1950, burnSpreadRadius: 39, threat: 12.6 },
+        { range: 204, cooldownMs: 1000, damage: 26, flameRotateRate: 1.7, flameArcRadians: 0.35, burnDamagePerSecond: 9.3, burnDurationMs: 2000, burnSpreadRadius: 40, threat: 14.8 },
+        { range: 220, cooldownMs: 1000, damage: 28, flameRotateRate: 1.86, flameArcRadians: 0.35, burnDamagePerSecond: 10.1, burnDurationMs: 2050, burnSpreadRadius: 41, threat: 17.2 },
+        { range: 238, cooldownMs: 1000, damage: 31, flameRotateRate: 2.02, flameArcRadians: 0.36, burnDamagePerSecond: 10.9, burnDurationMs: 2100, burnSpreadRadius: 42, threat: 19.8 },
+        { range: 256, cooldownMs: 1000, damage: 34, flameRotateRate: 2.18, flameArcRadians: 0.36, burnDamagePerSecond: 11.8, burnDurationMs: 2150, burnSpreadRadius: 43, threat: 22.7 },
+        { range: 274, cooldownMs: 1000, damage: 37, flameRotateRate: 2.34, flameArcRadians: 0.37, burnDamagePerSecond: 12.7, burnDurationMs: 2200, burnSpreadRadius: 44, threat: 25.8 },
+        { range: 292, cooldownMs: 1000, damage: 40, flameRotateRate: 2.52, flameArcRadians: 0.37, burnDamagePerSecond: 13.6, burnDurationMs: 2250, burnSpreadRadius: 45, threat: 29.1 },
+        { range: 310, cooldownMs: 1000, damage: 43, flameRotateRate: 2.7, flameArcRadians: 0.38, burnDamagePerSecond: 14.5, burnDurationMs: 2300, burnSpreadRadius: 46, threat: 32.6 },
+        { range: 328, cooldownMs: 1000, damage: 46, flameRotateRate: 2.88, flameArcRadians: 0.38, burnDamagePerSecond: 15.5, burnDurationMs: 2350, burnSpreadRadius: 47, threat: 36.3 },
+        { range: 348, cooldownMs: 1000, damage: 49, flameRotateRate: 3.06, flameArcRadians: 0.39, burnDamagePerSecond: 16.5, burnDurationMs: 2400, burnSpreadRadius: 48, threat: 40.2 },
+        { range: 368, cooldownMs: 1000, damage: 52, flameRotateRate: 3.24, flameArcRadians: 0.39, burnDamagePerSecond: 17.5, burnDurationMs: 2450, burnSpreadRadius: 50, threat: 44.3 },
+    ],
     cluster: [
         { range: 170, cooldownMs: 1600, damage: 19, bulletSpeed: 260, explosionRadius: 54, fragmentCount: 5, fragmentDamage: 6, threat: 5.6 },
         { range: 195, cooldownMs: 1100, damage: 24, bulletSpeed: 275, explosionRadius: 64, fragmentCount: 6, fragmentDamage: 8, threat: 7.0 },
@@ -197,6 +223,7 @@ export const TOWER_COLORS: Record<TowerType, number> = {
     easy: 0x2ec4b6,
     spray: 0xff9f1c,
     missile: 0xbde0fe,
+    flamethrower: 0xff3030,
     cluster: 0xf15bb5,
     wall: 0xe53935,
     airstrike: 0xf7f0d6,

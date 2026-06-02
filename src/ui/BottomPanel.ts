@@ -4,12 +4,13 @@ import { getTowerStats } from '../pathfinding/ThreatMap';
 import { createWholeWordPattern, VocabQuestionSystem } from '../systems/VocabQuestionSystem';
 import type { GridPoint, TowerDifficulty, TowerState, TowerType, Vec2, VocabQuestion } from '../types';
 
-const BUILD_TOWER_TYPES: TowerType[] = ['easy', 'spray', 'missile', 'cluster', 'wall', 'airstrike'];
+const BUILD_TOWER_TYPES: TowerType[] = ['easy', 'spray', 'missile', 'flamethrower', 'cluster', 'wall', 'airstrike'];
 const spritePath = (path: string): string => `${import.meta.env.BASE_URL}${path}`;
 const TOWER_SELECTOR_OPTIONS: Record<TowerType, { imagePath?: string; markerClassName?: string; label: string; testId: string }> = {
     easy: { imagePath: spritePath('sprites/turret_basic.png'), label: 'Bullet', testId: 'select-easy' },
     spray: { imagePath: spritePath('sprites/turret_cluster.png'), label: 'Spray', testId: 'select-medium' },
     missile: { imagePath: spritePath('sprites/turret_sidewinder.png'), label: 'Homing missile', testId: 'select-hard' },
+    flamethrower: { markerClassName: 'tower-selector-marker tower-selector-marker-flamethrower', label: 'Flamethrower', testId: 'select-flamethrower' },
     cluster: { imagePath: spritePath('sprites/turrent_cluster_bomb.png'), label: 'Cluster', testId: 'select-veryHard' },
     wall: { imagePath: spritePath('sprites/wall.png'), label: 'Wall', testId: 'select-wall' },
     airstrike: { markerClassName: 'tower-selector-marker tower-selector-marker-airstrike', label: 'Airstrike', testId: 'select-airstrike' },

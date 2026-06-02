@@ -81,6 +81,7 @@ const TOWER_TEXTURES: Record<TowerType, string> = {
     easy: SPRITE_PATHS.towerBasic,
     spray: SPRITE_PATHS.towerCluster,
     missile: SPRITE_PATHS.towerSidewinder,
+    flamethrower: SPRITE_PATHS.wall,
     cluster: SPRITE_PATHS.towerClusterBomb,
     wall: SPRITE_PATHS.wall,
     airstrike: SPRITE_PATHS.wall,
@@ -97,9 +98,10 @@ const BUILD_SHORTCUTS: Record<string, BuildTowerSelection> = {
     '1': 'easy',
     '2': 'spray',
     '3': 'missile',
-    '4': 'cluster',
-    '5': 'wall',
-    '6': 'airstrike',
+    '4': 'flamethrower',
+    '5': 'cluster',
+    '6': 'wall',
+    '7': 'airstrike',
 };
 
 const TOWER_SPRITE_MAX_SIZE = GAME_CONFIG.map.cellSize * 1.2;
@@ -334,6 +336,7 @@ export class GameScene extends Phaser.Scene {
         for (const explosion of towerResult.explosions) {
             this.effects.spawnExplosion(explosion.x, explosion.y, explosion.radius, false);
         }
+        this.effects.emitFlameJets(towerResult.flameJets, deltaMs);
         this.playRepeatedSound(SOUND_KEYS.pop, towerResult.shotsFired, 0.18);
         this.playRepeatedSound(SOUND_KEYS.owHurt, towerResult.hurtSounds, 0.2);
         this.playRepeatedSound(SOUND_KEYS.owDeath, towerResult.deathSounds, 0.28);
@@ -358,6 +361,7 @@ export class GameScene extends Phaser.Scene {
             this.effects.spawnImpact(impact.x, impact.y, impact.type);
         }
         this.effects.emitTrails(this.projectiles, deltaMs);
+        this.effects.emitBurningEnemies(this.enemies, deltaMs);
         this.effects.update(deltaMs);
         this.playRepeatedSound(SOUND_KEYS.owHurt, projectileResult.hurtSounds, 0.2);
         this.playRepeatedSound(SOUND_KEYS.owDeath, projectileResult.deathSounds, 0.28);
@@ -1026,6 +1030,15 @@ export class GameScene extends Phaser.Scene {
                 }
                 continue;
             }
+            if (tower.type === 'flamethrower') {
+                const existingSprite = this.towerSprites.get(tower.id);
+                if (existingSprite) {
+                    existingSprite.destroy();
+                    this.towerSprites.delete(tower.id);
+                }
+                this.renderFlamethrowerTower(tower, center);
+                continue;
+            }
             let sprite = this.towerSprites.get(tower.id);
             if (!sprite) {
                 sprite = this.add.image(center.x, center.y, TOWER_TEXTURES[tower.type]).setDepth(2);
@@ -1058,6 +1071,33 @@ export class GameScene extends Phaser.Scene {
                 sprite.destroy();
                 this.towerSprites.delete(towerId);
             }
+        }
+    }
+
+    private renderFlamethrowerTower(tower: TowerState, center: Vec2): void {
+        const radius = GAME_CONFIG.map.cellSize * 0.34;
+        const angle = tower.flameAngleRadians ?? 0;
+        this.graphics.fillStyle(0x3a0c08, 0.64);
+        this.graphics.fillCircle(center.x + 2, center.y + 3, radius * 1.12);
+        this.graphics.fillStyle(0xff3030, tower === this.selectedTower ? 1 : 0.94);
+        this.graphics.fillCircle(center.x, center.y, radius);
+        this.graphics.fillStyle(0xff8a16, 0.82);
+        this.graphics.fillCircle(center.x - radius * 0.22, center.y - radius * 0.24, radius * 0.28);
+        this.graphics.lineStyle(4, 0xfff1a8, 0.95);
+        this.graphics.beginPath();
+        this.graphics.moveTo(center.x + Math.cos(angle) * radius * 0.2, center.y + Math.sin(angle) * radius * 0.2);
+        this.graphics.lineTo(center.x + Math.cos(angle) * radius * 1.18, center.y + Math.sin(angle) * radius * 1.18);
+        this.graphics.strokePath();
+
+        this.graphics.fillStyle(0x101614, 0.9);
+        const levelMarkerColumns = 4;
+        const levelMarkerSpacing = 5;
+        const levelMarkerStartX = center.x - ((levelMarkerColumns - 1) * levelMarkerSpacing) / 2;
+        const levelMarkerStartY = center.y + 7;
+        for (let level = 0; level < tower.level; level += 1) {
+            const markerColumn = level % levelMarkerColumns;
+            const markerRow = Math.floor(level / levelMarkerColumns);
+            this.graphics.fillCircle(levelMarkerStartX + markerColumn * levelMarkerSpacing, levelMarkerStartY + markerRow * levelMarkerSpacing, 1.8);
         }
     }
 
