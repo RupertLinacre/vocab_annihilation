@@ -592,7 +592,7 @@ body {
 }
 
 .difficulty-selector-button {
-  flex: 1 1 180px;
+  flex: 1 1 148px;
   max-width: 240px;
   text-align: center;
 }
@@ -605,17 +605,22 @@ body {
 
 .tower-selector-button {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
+  justify-content: center;
+  gap: 4px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
   min-height: 0;
-  height: 91px;
-  padding: 8px 12px;
+  height: 76px;
+  padding: 6px 5px;
+  text-align: center;
 }
 
 .tower-selector-image {
   width: auto;
-  height: 75px;
+  height: 52px;
   max-width: 100%;
   flex: 0 0 auto;
   object-fit: contain;
@@ -623,9 +628,9 @@ body {
 }
 
 .tower-selector-marker {
-  width: 48px;
-  height: 48px;
-  flex: 0 0 48px;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
   pointer-events: none;
 }
 
@@ -669,14 +674,16 @@ body {
 .tower-selector-content {
   display: flex;
   align-items: center;
+  justify-content: center;
   min-width: 0;
-  text-align: left;
+  text-align: center;
 }
 
 .tower-selector-label {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
 }
 
 .choice-button {
