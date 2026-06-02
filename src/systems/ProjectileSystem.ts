@@ -129,7 +129,11 @@ export class ProjectileSystem {
             projectile.previousX = projectile.x;
             projectile.previousY = projectile.y;
             if (projectile.type === 'missile') {
-                this.updateMissileVelocity(projectile, enemies, deltaMs);
+                if ((projectile.homingDelayMs ?? 0) > 0) {
+                    projectile.homingDelayMs = Math.max(0, (projectile.homingDelayMs ?? 0) - deltaMs);
+                } else {
+                    this.updateMissileVelocity(projectile, enemies, deltaMs);
+                }
             }
             projectile.x += projectile.vx * (deltaMs / 1000);
             projectile.y += projectile.vy * (deltaMs / 1000);
