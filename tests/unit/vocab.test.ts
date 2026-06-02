@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SeededRandom } from '../../src/core/SeededRandom';
 import { canUpgradeTower, createTower, getMaxTowerLevel, getUpgradeQuestionDifficulty, upgradeTower } from '../../src/entities/Tower';
-import { blankWordInExample, mapRawDifficultyToTowerDifficulty, mapTowerDifficultyToRawDifficulty, normalizeVocab, VocabQuestionSystem } from '../../src/systems/VocabQuestionSystem';
+import { blankWordInExample, mapRawDifficultyToTowerDifficulty, mapTowerDifficultyToRawDifficulty, normalizeBaseVocabDifficulty, normalizeVocab, VocabQuestionSystem } from '../../src/systems/VocabQuestionSystem';
 import type { NormalizedVocabEntry } from '../../src/types';
 
 const entries: NormalizedVocabEntry[] = [
@@ -83,7 +83,20 @@ describe('vocabulary questions and upgrades', () => {
         expect(mapTowerDifficultyToRawDifficulty('easy', 'adultLevel1')).toBe('adultLevel1');
         expect(mapTowerDifficultyToRawDifficulty('medium', 'adultLevel1')).toBe('adultLevel2');
         expect(mapTowerDifficultyToRawDifficulty('hard', 'adultLevel1')).toBe('adultLevel3');
-        expect(mapTowerDifficultyToRawDifficulty('veryHard', 'adultLevel7')).toBe('adultLevel10');
+        expect(mapTowerDifficultyToRawDifficulty('veryHard', 'adultLevel1')).toBe('adultLevel4');
+        expect(mapTowerDifficultyToRawDifficulty('veryHard', 'adultLevel4')).toBe('adultLevel5');
+        expect(mapTowerDifficultyToRawDifficulty('veryHard', 'adultLevel5')).toBe('adultLevel5');
+    });
+
+    it('normalizes old adult base levels into five combined adult levels', () => {
+        expect(normalizeBaseVocabDifficulty('adultLevel1')).toBe('adultLevel1');
+        expect(normalizeBaseVocabDifficulty('adultLevel2')).toBe('adultLevel2');
+        expect(normalizeBaseVocabDifficulty('adultLevel3')).toBe('adultLevel3');
+        expect(normalizeBaseVocabDifficulty('adultLevel6')).toBe('adultLevel3');
+        expect(normalizeBaseVocabDifficulty('adultLevel9')).toBe('adultLevel5');
+        expect(normalizeBaseVocabDifficulty('adultLevel10')).toBe('adultLevel5');
+        expect(normalizeBaseVocabDifficulty('year3')).toBe('year3');
+        expect(normalizeBaseVocabDifficulty('not-real')).toBeUndefined();
     });
 
     it('normalizes raw vocab against the chosen base difficulty', () => {
@@ -106,10 +119,41 @@ describe('vocabulary questions and upgrades', () => {
             { word: 'alpha', definition: 'first', example: 'The alpha team lined up first.', difficulty: 'year1', synonyms: [], antonyms: [] },
             { word: 'paraphrase', definition: 'restate an idea', example: 'Please paraphrase the memo in plain terms.', difficulty: 'adultLevel1', synonyms: [], antonyms: [] },
             { word: 'ostensible', definition: 'appearing to be true', example: 'The ostensible reason hid the real motive.', difficulty: 'adultLevel2', synonyms: [], antonyms: [] },
+            { word: 'cogent', definition: 'clear and convincing', example: 'The cogent report changed the vote.', difficulty: 'adultLevel3', synonyms: [], antonyms: [] },
         ], 'adultLevel1');
 
-        expect(adultNormalized.map((entry) => entry.word)).toEqual(['paraphrase', 'ostensible']);
-        expect(adultNormalized.map((entry) => entry.difficulty)).toEqual(['easy', 'medium']);
+        expect(adultNormalized.map((entry) => entry.word)).toEqual(['paraphrase', 'ostensible', 'cogent']);
+        expect(adultNormalized.map((entry) => entry.difficulty)).toEqual(['easy', 'medium', 'hard']);
+        expect(mapRawDifficultyToTowerDifficulty('adultLevel2', 'adultLevel1')).toBe('medium');
+        expect(mapRawDifficultyToTowerDifficulty('adultLevel4', 'adultLevel3')).toBe('medium');
+        expect(mapRawDifficultyToTowerDifficulty('adultLevel5', 'adultLevel3')).toBe('hard');
+    });
+
+    it('uses the hardest available question when the requested tower difficulty has no entries', () => {
+        const adultHardestBaseEntries = normalizeVocab([
+            { word: 'diffident', definition: 'shy or lacking confidence', example: 'The diffident speaker spoke softly.', difficulty: 'adultLevel5', synonyms: [], antonyms: [] },
+            { word: 'specious', definition: 'seeming true but actually false', example: 'The specious excuse fooled nobody.', difficulty: 'adultLevel5', synonyms: [], antonyms: [] },
+        ], 'adultLevel5');
+        const system = new VocabQuestionSystem(new SeededRandom(12), adultHardestBaseEntries);
+        const question = system.createQuestion('veryHard');
+
+        expect(question.difficulty).toBe('easy');
+        expect(['diffident', 'specious']).toContain(question.correctWord);
+    });
+
+    it('can answer very hard tower questions from a legacy hardest adult base difficulty', () => {
+        const legacyBaseDifficulty = normalizeBaseVocabDifficulty('adultLevel9');
+        expect(legacyBaseDifficulty).toBe('adultLevel5');
+        const adultHardestBaseEntries = normalizeVocab([
+            { word: 'diffident', definition: 'shy or lacking confidence', example: 'The diffident speaker spoke softly.', difficulty: 'adultLevel5', synonyms: [], antonyms: [] },
+            { word: 'specious', definition: 'seeming true but actually false', example: 'The specious excuse fooled nobody.', difficulty: 'adultLevel5', synonyms: [], antonyms: [] },
+            { word: 'probity', definition: 'honesty and strong morals', example: 'Her probity reassured the panel.', difficulty: 'adultLevel5', synonyms: [], antonyms: [] },
+        ], legacyBaseDifficulty!);
+        const system = new VocabQuestionSystem(new SeededRandom(13), adultHardestBaseEntries);
+        const question = system.createQuestion('veryHard');
+
+        expect(question.difficulty).toBe('easy');
+        expect(question.choices).toContain(question.correctWord);
     });
 
     it('uses source definitions and masks whole-word examples', () => {

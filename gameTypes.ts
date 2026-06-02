@@ -12,12 +12,7 @@ export type RawVocabDifficulty =
     | 'adultLevel2'
     | 'adultLevel3'
     | 'adultLevel4'
-    | 'adultLevel5'
-    | 'adultLevel6'
-    | 'adultLevel7'
-    | 'adultLevel8'
-    | 'adultLevel9'
-    | 'adultLevel10';
+    | 'adultLevel5';
 
 export interface WordEntry {
     word: string;

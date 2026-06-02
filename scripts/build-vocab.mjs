@@ -24,11 +24,6 @@ const DIFFICULTIES = [
     'adultLevel3',
     'adultLevel4',
     'adultLevel5',
-    'adultLevel6',
-    'adultLevel7',
-    'adultLevel8',
-    'adultLevel9',
-    'adultLevel10',
 ];
 const DIFFICULTY_SET = new Set(DIFFICULTIES);
 const DIFFICULTY_DIRECTORIES = {
@@ -46,11 +41,6 @@ const DIFFICULTY_DIRECTORIES = {
     adultLevel3: 'adult_level_3',
     adultLevel4: 'adult_level_4',
     adultLevel5: 'adult_level_5',
-    adultLevel6: 'adult_level_6',
-    adultLevel7: 'adult_level_7',
-    adultLevel8: 'adult_level_8',
-    adultLevel9: 'adult_level_9',
-    adultLevel10: 'adult_level_10',
 };
 const DIRECTORY_DIFFICULTIES = Object.fromEntries(
     Object.entries(DIFFICULTY_DIRECTORIES).map(([difficulty, directory]) => [directory, difficulty]),

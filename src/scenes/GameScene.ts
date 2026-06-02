@@ -16,9 +16,9 @@ import { ProjectileSystem } from '../systems/ProjectileSystem';
 import { TowerSystem, type AirstrikeImpactCell } from '../systems/TowerSystem';
 import { updateEnemyWallObjective } from '../systems/WallSystem';
 import {
-    BASE_VOCAB_DIFFICULTIES,
+    BASE_VOCAB_DIFFICULTY_LABELS,
     normalizeVocab,
-    RAW_VOCAB_DIFFICULTY_LABELS,
+    normalizeBaseVocabDifficulty,
     type BaseVocabDifficulty,
     VocabQuestionSystem,
 } from '../systems/VocabQuestionSystem';
@@ -130,7 +130,7 @@ const SPAWN_RATE_LABELS: Record<GameDifficulty, string> = {
 };
 
 function isBaseVocabDifficulty(value: string): value is BaseVocabDifficulty {
-    return BASE_VOCAB_DIFFICULTIES.includes(value as BaseVocabDifficulty);
+    return normalizeBaseVocabDifficulty(value) === value;
 }
 
 type EnemyTextureTier = keyof typeof ENEMY_TEXTURES;
@@ -686,7 +686,7 @@ export class GameScene extends Phaser.Scene {
     private readSavedBaseDifficulty(): BaseVocabDifficulty {
         const savedBaseDifficulty = this.readUrlOption(URL_OPTION_KEYS.baseDifficulty)
             ?? window.localStorage.getItem(BASE_DIFFICULTY_STORAGE_KEY);
-        return savedBaseDifficulty && isBaseVocabDifficulty(savedBaseDifficulty) ? savedBaseDifficulty : 'year3';
+        return savedBaseDifficulty ? normalizeBaseVocabDifficulty(savedBaseDifficulty) ?? 'year3' : 'year3';
     }
 
     private readSavedIncludeExampleInQuestion(): boolean {
@@ -881,7 +881,7 @@ export class GameScene extends Phaser.Scene {
         if (popup) {
             popup.setAttribute(
                 'aria-label',
-                `Settings, spawn rate ${SPAWN_RATE_LABELS[this.spawnRate]}, base difficulty ${RAW_VOCAB_DIFFICULTY_LABELS[this.baseDifficulty]}, examples ${this.includeExampleInQuestion ? 'on' : 'off'}`,
+                `Settings, spawn rate ${SPAWN_RATE_LABELS[this.spawnRate]}, base difficulty ${BASE_VOCAB_DIFFICULTY_LABELS[this.baseDifficulty]}, examples ${this.includeExampleInQuestion ? 'on' : 'off'}`,
             );
         }
     }

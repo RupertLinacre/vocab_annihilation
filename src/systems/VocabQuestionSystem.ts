@@ -12,11 +12,6 @@ const ADULT_BASE_VOCAB_DIFFICULTIES = [
     'adultLevel3',
     'adultLevel4',
     'adultLevel5',
-    'adultLevel6',
-    'adultLevel7',
-    'adultLevel8',
-    'adultLevel9',
-    'adultLevel10',
 ] as const;
 
 export const BASE_VOCAB_DIFFICULTIES = [...CHILD_BASE_VOCAB_DIFFICULTIES, ...ADULT_BASE_VOCAB_DIFFICULTIES] as const;
@@ -38,11 +33,6 @@ const RAW_DIFFICULTY_ORDER: RawVocabDifficulty[] = [
     'adultLevel3',
     'adultLevel4',
     'adultLevel5',
-    'adultLevel6',
-    'adultLevel7',
-    'adultLevel8',
-    'adultLevel9',
-    'adultLevel10',
 ];
 
 export const RAW_VOCAB_DIFFICULTY_LABELS: Record<RawVocabDifficulty, string> = {
@@ -60,11 +50,20 @@ export const RAW_VOCAB_DIFFICULTY_LABELS: Record<RawVocabDifficulty, string> = {
     adultLevel3: 'Adult Level 3',
     adultLevel4: 'Adult Level 4',
     adultLevel5: 'Adult Level 5',
-    adultLevel6: 'Adult Level 6',
-    adultLevel7: 'Adult Level 7',
-    adultLevel8: 'Adult Level 8',
-    adultLevel9: 'Adult Level 9',
-    adultLevel10: 'Adult Level 10',
+};
+
+export const BASE_VOCAB_DIFFICULTY_LABELS: Record<BaseVocabDifficulty, string> = {
+    reception: 'Reception',
+    year1: 'Year 1',
+    year2: 'Year 2',
+    year3: 'Year 3',
+    year4: 'Year 4',
+    year5: 'Year 5',
+    adultLevel1: 'Adult Level 1',
+    adultLevel2: 'Adult Level 2',
+    adultLevel3: 'Adult Level 3',
+    adultLevel4: 'Adult Level 4',
+    adultLevel5: 'Adult Level 5',
 };
 
 const TOWER_DIFFICULTY_OFFSETS: Record<TowerDifficulty, number> = {
@@ -74,27 +73,50 @@ const TOWER_DIFFICULTY_OFFSETS: Record<TowerDifficulty, number> = {
     veryHard: 3,
 };
 
-function clampDifficultyIndex(index: number): number {
-    return Math.max(0, Math.min(index, RAW_DIFFICULTY_ORDER.length - 1));
-}
-
 function isAdultVocabDifficulty(difficulty: RawVocabDifficulty): boolean {
     return difficulty.startsWith('adultLevel');
 }
 
+export function normalizeBaseVocabDifficulty(value: string): BaseVocabDifficulty | undefined {
+    if (BASE_VOCAB_DIFFICULTIES.includes(value as BaseVocabDifficulty)) {
+        return value as BaseVocabDifficulty;
+    }
+
+    const match = /^adultLevel(\d+)$/.exec(value);
+    if (!match) {
+        return undefined;
+    }
+
+    const adultLevel = Number(match[1]);
+    if (!Number.isInteger(adultLevel) || adultLevel < 1 || adultLevel > 10) {
+        return undefined;
+    }
+
+    const combinedLevel = Math.ceil(adultLevel / 2);
+    return `adultLevel${combinedLevel}` as BaseVocabDifficulty;
+}
+
+function difficultyRank(difficulty: RawVocabDifficulty): number {
+    return RAW_DIFFICULTY_ORDER.indexOf(difficulty);
+}
+
+function clampDifficultyRank(rank: number): number {
+    return Math.max(0, Math.min(rank, RAW_DIFFICULTY_ORDER.length - 1));
+}
+
 export function mapTowerDifficultyToRawDifficulty(difficulty: TowerDifficulty, baseDifficulty: BaseVocabDifficulty = 'reception'): RawVocabDifficulty {
-    const baseIndex = RAW_DIFFICULTY_ORDER.indexOf(baseDifficulty);
-    const rawIndex = clampDifficultyIndex(baseIndex + TOWER_DIFFICULTY_OFFSETS[difficulty]);
-    return RAW_DIFFICULTY_ORDER[rawIndex];
+    const baseRank = difficultyRank(baseDifficulty);
+    const rawRank = clampDifficultyRank(baseRank + TOWER_DIFFICULTY_OFFSETS[difficulty]);
+    return RAW_DIFFICULTY_ORDER[rawRank];
 }
 
 export function mapRawDifficultyToTowerDifficulty(
     difficulty: RawVocabDifficulty,
     baseDifficulty: BaseVocabDifficulty = 'reception',
 ): TowerDifficulty {
-    const rawIndex = RAW_DIFFICULTY_ORDER.indexOf(difficulty);
-    const baseIndex = RAW_DIFFICULTY_ORDER.indexOf(baseDifficulty);
-    const relativeIndex = clampDifficultyIndex(rawIndex - baseIndex);
+    const rawRank = difficultyRank(difficulty);
+    const baseRank = difficultyRank(baseDifficulty);
+    const relativeIndex = Math.max(0, rawRank - baseRank);
     if (relativeIndex <= 0) {
         return 'easy';
     }
@@ -142,6 +164,25 @@ function adjacentDifficulties(difficulty: TowerDifficulty): TowerDifficulty[] {
         .map(({ candidate }) => candidate);
 }
 
+function availableDifficultyFor(
+    entries: readonly NormalizedVocabEntry[],
+    requestedDifficulty: TowerDifficulty,
+): TowerDifficulty {
+    const availableDifficulties = new Set(entries.map((entry) => entry.difficulty));
+    const requestedIndex = DIFFICULTY_ORDER.indexOf(requestedDifficulty);
+    const hardestAvailableAtOrBelowRequest = [...DIFFICULTY_ORDER]
+        .reverse()
+        .find((candidate) => availableDifficulties.has(candidate) && DIFFICULTY_ORDER.indexOf(candidate) <= requestedIndex);
+    if (hardestAvailableAtOrBelowRequest) {
+        return hardestAvailableAtOrBelowRequest;
+    }
+    const easiestAvailableAboveRequest = DIFFICULTY_ORDER.find((candidate) => availableDifficulties.has(candidate));
+    if (easiestAvailableAboveRequest) {
+        return easiestAvailableAboveRequest;
+    }
+    throw new Error('Cannot create a vocabulary question without any vocabulary entries');
+}
+
 export class VocabQuestionSystem {
     private entries: NormalizedVocabEntry[];
     private lastQuestionWord: string | undefined;
@@ -159,15 +200,16 @@ export class VocabQuestionSystem {
     }
 
     createQuestion(difficulty: TowerDifficulty): VocabQuestion {
-        const pool = this.entries.filter((entry) => entry.difficulty === difficulty);
+        const availableDifficulty = availableDifficultyFor(this.entries, difficulty);
+        const pool = this.entries.filter((entry) => entry.difficulty === availableDifficulty);
         const candidates = pool.filter((entry) => entry.word !== this.lastQuestionWord);
         const correct = this.rng.choice(candidates.length > 0 ? candidates : pool);
-        const distractors = this.pickDistractors(correct, difficulty);
+        const distractors = this.pickDistractors(correct, availableDifficulty);
         const choices = this.rng.shuffle([correct.word, ...distractors.map((entry) => entry.word)]);
         this.lastQuestionWord = correct.word;
         return {
-            id: `${difficulty}:${correct.word}:${Math.floor(this.rng.next() * 1000000)}`,
-            difficulty,
+            id: `${availableDifficulty}:${correct.word}:${Math.floor(this.rng.next() * 1000000)}`,
+            difficulty: availableDifficulty,
             definition: correct.definition,
             example: correct.example,
             correctWord: correct.word,
