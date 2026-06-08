@@ -1097,6 +1097,24 @@ html.is-mobile .side-info .bottom-panel .tower-selector-label {
   line-height: 1.1;
 }
 
+html.is-mobile .side-info.is-showing-settings > :not(.settings-popup) {
+  display: none !important;
+}
+
+html.is-mobile .side-info .settings-popup {
+  position: relative;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  z-index: auto;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  min-height: 100%;
+  overflow-y: auto;
+}
+
 html.is-mobile .drawer-backdrop {
   position: absolute;
   inset: 0;
@@ -1109,11 +1127,6 @@ html.is-mobile .drawer-backdrop[hidden] {
 }
 
 html.is-mobile .settings-popup {
-  top: auto;
-  right: 8px;
-  bottom: 8px;
-  left: auto;
-  z-index: 14;
   width: min(320px, 86vw);
   max-height: 80dvh;
   overflow-y: auto;

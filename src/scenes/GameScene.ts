@@ -595,9 +595,17 @@ export class GameScene extends Phaser.Scene {
         const spawnRateSelect = document.querySelector<HTMLSelectElement>('[data-testid="spawn-rate-select"]')!;
         const baseDifficultySelect = document.querySelector<HTMLSelectElement>('[data-testid="base-difficulty-select"]')!;
         const includeExampleCheckbox = document.querySelector<HTMLInputElement>('[data-testid="include-example-checkbox"]')!;
+        this.mobileLayout?.attachSettingsPopup(popup);
+        const setPopupOpen = (open: boolean) => {
+            if (this.mobileLayout) {
+                this.mobileLayout.setSettingsOpen(open);
+            } else {
+                popup.hidden = !open;
+            }
+            button.setAttribute('aria-expanded', String(open));
+        };
         const closePopup = () => {
-            popup.hidden = true;
-            button.setAttribute('aria-expanded', 'false');
+            setPopupOpen(false);
         };
         const restartGame = () => {
             closePopup();
@@ -605,9 +613,8 @@ export class GameScene extends Phaser.Scene {
         };
 
         button.addEventListener('click', () => {
-            const shouldOpen = popup.hidden;
-            popup.hidden = !shouldOpen;
-            button.setAttribute('aria-expanded', `${shouldOpen}`);
+            const shouldOpen = popup.hidden === true;
+            setPopupOpen(shouldOpen);
         });
         spawnRateSelect.addEventListener('change', () => {
             const value = spawnRateSelect.value;

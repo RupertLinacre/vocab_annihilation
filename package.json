@@ -7,7 +7,7 @@
   "scripts": {
     "build:vocab": "node scripts/build-vocab.mjs",
     "predev": "npm run build:vocab",
-    "dev": "vite --host 0.0.0.0",
+    "dev": "node scripts/dev.mjs",
     "optimize:sprites": "node scripts/optimize-sprites.mjs",
     "prebuild": "npm run build:vocab && npm run optimize:sprites",
     "build": "tsc --noEmit && vite build",

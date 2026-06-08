@@ -29,6 +29,7 @@ export class MobileLayout {
     private readonly sidePanel: HTMLElement;
     private readonly infoHost: HTMLElement;
     private readonly towersButton: HTMLButtonElement;
+    private settingsPopup?: HTMLElement;
 
     constructor() {
         document.documentElement.classList.add('is-mobile');
@@ -81,6 +82,18 @@ export class MobileLayout {
 
     getInfoHost(): HTMLElement {
         return this.infoHost;
+    }
+
+    attachSettingsPopup(popup: HTMLElement): void {
+        this.settingsPopup = popup;
+        this.infoHost.append(popup);
+    }
+
+    setSettingsOpen(open: boolean): void {
+        this.infoHost.classList.toggle('is-showing-settings', open);
+        if (this.settingsPopup) {
+            this.settingsPopup.hidden = !open;
+        }
     }
 
     /** Wires the Towers launcher to the constructed BottomPanel. */
