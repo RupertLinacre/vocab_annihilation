@@ -52,7 +52,6 @@ export class BottomPanel {
     private panelExpanded = true;
     private includeExampleInQuestion: boolean;
     private readonly mobile: BottomPanelMobileOptions | undefined;
-    private readonly drawerOpenListeners = new Set<(open: boolean) => void>();
 
     constructor(
         private readonly vocab: VocabQuestionSystem,
@@ -69,29 +68,11 @@ export class BottomPanel {
         (this.mobile?.infoHost ?? this.frame).append(this.buildMenu);
         this.toggleButton.addEventListener('click', () => this.setExpanded(!this.panelExpanded));
         this.renderDifficultySelector();
-        // On mobile the tower picker starts collapsed as a right-edge drawer.
-        this.setExpanded(!this.mobile);
+        this.setExpanded(true);
     }
 
     isMobile(): boolean {
         return this.mobile !== undefined;
-    }
-
-    toggleDrawer(): void {
-        this.setExpanded(!this.panelExpanded);
-    }
-
-    closeDrawer(): void {
-        this.setExpanded(false);
-    }
-
-    isDrawerOpen(): boolean {
-        return this.panelExpanded;
-    }
-
-    onDrawerOpenChange(listener: (open: boolean) => void): void {
-        this.drawerOpenListeners.add(listener);
-        listener(this.panelExpanded);
     }
 
     openBuild(cell: GridPoint, anchor: Vec2): void {
@@ -146,10 +127,6 @@ export class BottomPanel {
     setSelectedBuildDifficulty(selection: BuildTowerSelection): void {
         this.selectedBuildTower = selection;
         this.renderDifficultySelector();
-        // Selecting a tower on mobile dismisses the drawer back to the info panel.
-        if (this.mobile) {
-            this.setExpanded(false);
-        }
     }
 
     getSelectedBuildTower(): BuildTowerSelection {
@@ -353,7 +330,6 @@ export class BottomPanel {
         this.toggleButton.textContent = expanded ? '↓' : '↑';
         this.toggleButton.setAttribute('aria-expanded', String(expanded));
         this.toggleButton.setAttribute('aria-label', expanded ? 'Collapse difficulty panel' : 'Expand difficulty panel');
-        this.drawerOpenListeners.forEach((listener) => listener(expanded));
     }
 
     private clearPendingClose(): void {

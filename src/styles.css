@@ -878,11 +878,6 @@ html.is-mobile .side-controls {
   gap: 8px;
 }
 
-html.is-mobile.is-question-active .side-controls,
-html.is-mobile.is-question-active .side-towers-button {
-  display: none;
-}
-
 html.is-mobile #topbar-controls {
   position: static;
   top: auto;
@@ -929,7 +924,9 @@ html.is-mobile .side-info {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding-bottom: 10px;
   overflow-y: auto;
+  scroll-padding-bottom: 10px;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -1001,31 +998,12 @@ html.is-mobile .side-info .build-popup.is-answer-popup .popup-definition {
   min-height: 24px;
 }
 
-html.is-mobile .side-towers-button {
-  flex: 0 0 auto;
-  min-height: 54px;
-  border: 1px solid rgba(247, 240, 214, 0.3);
-  border-radius: 10px;
-  color: var(--ink);
-  background: var(--panel-strong);
-  font: inherit;
-  font-weight: 800;
-  font-size: 16px;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-}
-
-html.is-mobile .side-towers-button.is-active {
-  border-color: rgba(243, 182, 75, 0.7);
-  background: rgba(243, 182, 75, 0.18);
-  color: #fff8df;
-}
-
 /* Tower picker as an inline section inside the side menu ---------------- */
 html.is-mobile .side-info .bottom-panel {
   position: static;
   z-index: auto;
-  display: none;
+  flex: 0 0 auto;
+  display: block;
   min-height: 0;
   margin: 0;
   padding: 10px;
@@ -1038,7 +1016,6 @@ html.is-mobile .side-info .bottom-panel {
 }
 
 html.is-mobile .side-info .bottom-panel.is-open {
-  display: block;
   animation: build-popup-enter 120ms ease-out;
 }
 
@@ -1095,6 +1072,10 @@ html.is-mobile .side-info .bottom-panel .tower-selector-marker-airstrike::after 
 html.is-mobile .side-info .bottom-panel .tower-selector-label {
   font-size: 10px;
   line-height: 1.1;
+}
+
+html.is-mobile.is-question-active .side-info:not(.is-showing-settings) > :not(.build-popup) {
+  display: none !important;
 }
 
 html.is-mobile .side-info.is-showing-settings > :not(.settings-popup) {

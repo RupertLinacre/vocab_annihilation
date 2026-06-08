@@ -256,14 +256,6 @@ export class GameScene extends Phaser.Scene {
             onQuestionStateChange: (isActive) => this.setQuestionPause(isActive),
             onClose: () => this.clearSelection(),
         }, this.includeExampleInQuestion, this.mobileLayout ? { infoHost: this.mobileLayout.getInfoHost() } : undefined);
-        if (this.mobileLayout) {
-            this.mobileLayout.bindDrawer({
-                toggle: () => this.panel.toggleDrawer(),
-                close: () => this.panel.closeDrawer(),
-                isOpen: () => this.panel.isDrawerOpen(),
-                onOpenChange: (listener) => this.panel.onDrawerOpenChange(listener),
-            });
-        }
         this.setupMusicControls();
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.handlePointerDown(pointer));
         this.registerDebugKeys();

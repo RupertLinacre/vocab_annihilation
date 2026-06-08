@@ -28,7 +28,6 @@ export class MobileLayout {
     private readonly frame = document.querySelector<HTMLElement>('#game-frame')!;
     private readonly sidePanel: HTMLElement;
     private readonly infoHost: HTMLElement;
-    private readonly towersButton: HTMLButtonElement;
     private settingsPopup?: HTMLElement;
 
     constructor() {
@@ -49,14 +48,7 @@ export class MobileLayout {
         this.infoHost.className = 'side-info';
         this.infoHost.dataset.sideInfo = '';
 
-        this.towersButton = document.createElement('button');
-        this.towersButton.type = 'button';
-        this.towersButton.className = 'side-towers-button';
-        this.towersButton.dataset.testid = 'towers-launch';
-        this.towersButton.textContent = 'Towers';
-        this.towersButton.setAttribute('aria-expanded', 'false');
-
-        this.sidePanel.append(controlsSlot, hudSlot, this.infoHost, this.towersButton);
+        this.sidePanel.append(controlsSlot, hudSlot, this.infoHost);
         this.frame.append(this.sidePanel);
 
         // Relocate existing controls/HUD/status into the side panel.
@@ -94,20 +86,6 @@ export class MobileLayout {
         if (this.settingsPopup) {
             this.settingsPopup.hidden = !open;
         }
-    }
-
-    /** Wires the Towers launcher to the constructed BottomPanel. */
-    bindDrawer(controls: {
-        toggle: () => void;
-        close: () => void;
-        isOpen: () => boolean;
-        onOpenChange: (listener: (open: boolean) => void) => void;
-    }): void {
-        this.towersButton.addEventListener('click', () => controls.toggle());
-        controls.onOpenChange((open) => {
-            this.towersButton.setAttribute('aria-expanded', String(open));
-            this.towersButton.classList.toggle('is-active', open);
-        });
     }
 
     setQuestionActive(active: boolean): void {
