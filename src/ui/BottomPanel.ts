@@ -192,7 +192,7 @@ export class BottomPanel {
             header.classList.add('build-popup-header-compact');
         } else {
             const heading = this.createDiv('build-popup-head');
-            heading.append(this.createParagraph('panel-kicker build-popup-kicker', DIFFICULTY_LABELS[this.currentQuestion.difficulty]));
+            heading.append(this.createParagraph('panel-kicker build-popup-kicker', this.questionLabel(this.currentQuestion)));
             header.append(heading);
         }
 
@@ -228,7 +228,7 @@ export class BottomPanel {
 
         const header = this.createDiv('build-popup-header');
         const heading = this.createDiv('build-popup-head');
-        heading.append(this.createParagraph('panel-kicker build-popup-kicker', DIFFICULTY_LABELS[question.difficulty]));
+        heading.append(this.createParagraph('panel-kicker build-popup-kicker', this.questionLabel(question)));
         header.append(heading);
 
         const questionText = this.createQuestionText(question);
@@ -381,6 +381,10 @@ export class BottomPanel {
         paragraph.className = className;
         paragraph.textContent = text;
         return paragraph;
+    }
+
+    private questionLabel(question: VocabQuestion): string {
+        return question.label ?? DIFFICULTY_LABELS[question.difficulty];
     }
 
     private createQuestionText(question: VocabQuestion): HTMLDivElement {

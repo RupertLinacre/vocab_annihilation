@@ -92,11 +92,13 @@ export interface NormalizedVocabEntry {
     definition: string;
     example: string;
     difficulty: TowerDifficulty;
+    label?: string;
 }
 
 export interface VocabQuestion {
     id: string;
     difficulty: TowerDifficulty;
+    label?: string;
     definition: string;
     example: string;
     correctWord: string;

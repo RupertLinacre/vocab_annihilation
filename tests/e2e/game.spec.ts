@@ -102,6 +102,12 @@ test('vocabulary tower defence MVP is playable in the browser', async ({ page })
     await expect.poll(() => new URL(page.url()).searchParams.get('base-difficulty')).toBe('adultLevel1');
 
     await openSettings();
+    await page.getByTestId('base-difficulty-select').selectOption('rupert');
+    await page.waitForFunction(() => window.vocabAnnihilation?.getBaseDifficulty() === 'rupert');
+    await waitForGameReady();
+    await expect.poll(() => new URL(page.url()).searchParams.get('base-difficulty')).toBe('rupert');
+
+    await openSettings();
     await expect(page.getByTestId('include-example-checkbox')).toBeChecked();
     await page.getByTestId('include-example-checkbox').click();
     await page.waitForFunction(() => new URL(window.location.href).searchParams.get('include-example') === 'false');
