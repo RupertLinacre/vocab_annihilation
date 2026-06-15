@@ -6,6 +6,32 @@ import { isMobileLayout } from './ui/mobile';
 
 const baseUrl = import.meta.env.BASE_URL;
 
+function clearDevelopmentServiceWorker(): void {
+    if (!import.meta.env.DEV || !('serviceWorker' in navigator)) {
+        return;
+    }
+
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((registration) => {
+            registration.unregister();
+        });
+    }).catch(() => {
+        /* Development cleanup failures are non-fatal. */
+    });
+
+    if ('caches' in window) {
+        window.caches.keys().then((keys) => {
+            keys
+                .filter((key) => key.startsWith('vocab-annihilation-'))
+                .forEach((key) => {
+                    window.caches.delete(key);
+                });
+        }).catch(() => {
+            /* Development cleanup failures are non-fatal. */
+        });
+    }
+}
+
 function linkManifest(): void {
     if (document.querySelector('link[rel="manifest"]')) {
         return;
@@ -23,7 +49,7 @@ function linkManifest(): void {
 
 function registerServiceWorker(): void {
     // Service worker powers the installable Android PWA; only needed on mobile.
-    if (!isMobileLayout() || !('serviceWorker' in navigator)) {
+    if (import.meta.env.DEV || !isMobileLayout() || !('serviceWorker' in navigator)) {
         return;
     }
     window.addEventListener('load', () => {
@@ -33,6 +59,7 @@ function registerServiceWorker(): void {
     });
 }
 
+clearDevelopmentServiceWorker();
 linkManifest();
 registerServiceWorker();
 

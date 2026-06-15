@@ -90,6 +90,11 @@ describe('vocabulary questions and upgrades', () => {
         expect(mapTowerDifficultyToRawDifficulty('veryHard', 'adultLevel1')).toBe('adultLevel4');
         expect(mapTowerDifficultyToRawDifficulty('veryHard', 'adultLevel4')).toBe('adultLevel5');
         expect(mapTowerDifficultyToRawDifficulty('veryHard', 'adultLevel5')).toBe('adultLevel5');
+
+        expect(mapTowerDifficultyToRawDifficulty('easy', 'rupert')).toBe('rupert');
+        expect(mapTowerDifficultyToRawDifficulty('medium', 'rupert')).toBe('rupert');
+        expect(mapTowerDifficultyToRawDifficulty('hard', 'rupert')).toBe('rupert');
+        expect(mapTowerDifficultyToRawDifficulty('veryHard', 'rupert')).toBe('rupert');
     });
 
     it('normalizes old adult base levels into five combined adult levels', () => {
@@ -99,6 +104,7 @@ describe('vocabulary questions and upgrades', () => {
         expect(normalizeBaseVocabDifficulty('adultLevel6')).toBe('adultLevel3');
         expect(normalizeBaseVocabDifficulty('adultLevel9')).toBe('adultLevel5');
         expect(normalizeBaseVocabDifficulty('adultLevel10')).toBe('adultLevel5');
+        expect(normalizeBaseVocabDifficulty('rupert')).toBe('rupert');
         expect(normalizeBaseVocabDifficulty('year3')).toBe('year3');
         expect(normalizeBaseVocabDifficulty('not-real')).toBeUndefined();
     });
@@ -131,6 +137,17 @@ describe('vocabulary questions and upgrades', () => {
         expect(mapRawDifficultyToTowerDifficulty('adultLevel2', 'adultLevel1')).toBe('medium');
         expect(mapRawDifficultyToTowerDifficulty('adultLevel4', 'adultLevel3')).toBe('medium');
         expect(mapRawDifficultyToTowerDifficulty('adultLevel5', 'adultLevel3')).toBe('hard');
+
+        const rupertNormalized = normalizeVocab([
+            { word: 'alpha', definition: 'first', example: 'The alpha team lined up first.', difficulty: 'year1', synonyms: [], antonyms: [] },
+            { word: 'regal', definition: 'royal', example: 'The regal robe was purple.', difficulty: 'rupert', synonyms: [], antonyms: [] },
+            { word: 'morose', definition: 'gloomy', example: 'The morose child sighed.', difficulty: 'rupert', synonyms: [], antonyms: [] },
+            { word: 'paraphrase', definition: 'restate an idea', example: 'Please paraphrase the memo in plain terms.', difficulty: 'adultLevel1', synonyms: [], antonyms: [] },
+        ], 'rupert');
+
+        expect(rupertNormalized.map((entry) => entry.word)).toEqual(['regal', 'morose']);
+        expect(rupertNormalized.map((entry) => entry.difficulty)).toEqual(['easy', 'easy']);
+        expect(mapRawDifficultyToTowerDifficulty('rupert', 'rupert')).toBe('easy');
     });
 
     it('uses the hardest available question when the requested tower difficulty has no entries', () => {
@@ -171,5 +188,43 @@ describe('vocabulary questions and upgrades', () => {
         expect(normalized[1].definition).toBe('custom slither definition');
         expect(normalized[1].example).toBe('The snail will slither along the path.');
         expect(blankWordInExample('The goodness chart was good.', 'good')).toBe('The goodness chart was xxxx.');
+    });
+
+    it('loads Rupert words from the generated vocabulary source', () => {
+        const rupertEntries = normalizeVocab(undefined, 'rupert');
+        const rupertWords = rupertEntries.map((entry) => entry.word);
+
+        expect(rupertWords).toEqual([
+            'abruptly',
+            'acquaintances',
+            'antidote',
+            'assiduous',
+            'behemoth',
+            'callow',
+            'charisma',
+            'despondency',
+            'disquiet',
+            'entranced',
+            'flagitious',
+            'hostile',
+            'irresponsible',
+            'ivory',
+            'linger',
+            'morose',
+            'obsidian',
+            'precariously',
+            'prophecy',
+            'protagonist',
+            'ramshackle',
+            'regal',
+            'serenade',
+            'sinister',
+            'subterfuge',
+            'tenacity',
+        ]);
+        expect(new Set(rupertEntries.map((entry) => entry.label))).toEqual(new Set(['Rupert']));
+
+        const system = new VocabQuestionSystem(new SeededRandom(21), rupertEntries);
+        expect(system.createQuestion('veryHard').label).toBe('Rupert');
     });
 });

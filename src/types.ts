@@ -80,6 +80,9 @@ export interface ProjectileState {
     turnRate?: number;
     speed?: number;
     homingDelayMs?: number;
+    launchDelayMs?: number;
+    visualColor?: number;
+    smokeColor?: number;
     trailScale?: number;
     explosionRadius?: number;
     fragmentCount?: number;
@@ -92,11 +95,13 @@ export interface NormalizedVocabEntry {
     definition: string;
     example: string;
     difficulty: TowerDifficulty;
+    label?: string;
 }
 
 export interface VocabQuestion {
     id: string;
     difficulty: TowerDifficulty;
+    label?: string;
     definition: string;
     example: string;
     correctWord: string;

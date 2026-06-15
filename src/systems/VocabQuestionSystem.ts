@@ -13,8 +13,9 @@ const ADULT_BASE_VOCAB_DIFFICULTIES = [
     'adultLevel4',
     'adultLevel5',
 ] as const;
+const CUSTOM_BASE_VOCAB_DIFFICULTIES = ['rupert'] as const;
 
-export const BASE_VOCAB_DIFFICULTIES = [...CHILD_BASE_VOCAB_DIFFICULTIES, ...ADULT_BASE_VOCAB_DIFFICULTIES] as const;
+export const BASE_VOCAB_DIFFICULTIES = [...CHILD_BASE_VOCAB_DIFFICULTIES, ...ADULT_BASE_VOCAB_DIFFICULTIES, ...CUSTOM_BASE_VOCAB_DIFFICULTIES] as const;
 
 export type BaseVocabDifficulty = (typeof BASE_VOCAB_DIFFICULTIES)[number];
 
@@ -33,6 +34,7 @@ const RAW_DIFFICULTY_ORDER: RawVocabDifficulty[] = [
     'adultLevel3',
     'adultLevel4',
     'adultLevel5',
+    'rupert',
 ];
 
 export const RAW_VOCAB_DIFFICULTY_LABELS: Record<RawVocabDifficulty, string> = {
@@ -50,6 +52,7 @@ export const RAW_VOCAB_DIFFICULTY_LABELS: Record<RawVocabDifficulty, string> = {
     adultLevel3: 'Adult Level 3',
     adultLevel4: 'Adult Level 4',
     adultLevel5: 'Adult Level 5',
+    rupert: 'Rupert',
 };
 
 export const BASE_VOCAB_DIFFICULTY_LABELS: Record<BaseVocabDifficulty, string> = {
@@ -64,6 +67,7 @@ export const BASE_VOCAB_DIFFICULTY_LABELS: Record<BaseVocabDifficulty, string> =
     adultLevel3: 'Adult Level 3',
     adultLevel4: 'Adult Level 4',
     adultLevel5: 'Adult Level 5',
+    rupert: 'Rupert',
 };
 
 const TOWER_DIFFICULTY_OFFSETS: Record<TowerDifficulty, number> = {
@@ -75,6 +79,16 @@ const TOWER_DIFFICULTY_OFFSETS: Record<TowerDifficulty, number> = {
 
 function isAdultVocabDifficulty(difficulty: RawVocabDifficulty): boolean {
     return difficulty.startsWith('adultLevel');
+}
+
+function vocabFamily(difficulty: RawVocabDifficulty): 'adult' | 'child' | 'custom' {
+    if (isAdultVocabDifficulty(difficulty)) {
+        return 'adult';
+    }
+    if (difficulty === 'rupert') {
+        return 'custom';
+    }
+    return 'child';
 }
 
 export function normalizeBaseVocabDifficulty(value: string): BaseVocabDifficulty | undefined {
@@ -105,8 +119,14 @@ function clampDifficultyRank(rank: number): number {
 }
 
 export function mapTowerDifficultyToRawDifficulty(difficulty: TowerDifficulty, baseDifficulty: BaseVocabDifficulty = 'reception'): RawVocabDifficulty {
+    if (baseDifficulty === 'rupert') {
+        return 'rupert';
+    }
+
     const baseRank = difficultyRank(baseDifficulty);
-    const rawRank = clampDifficultyRank(baseRank + TOWER_DIFFICULTY_OFFSETS[difficulty]);
+    const maxDifficulty = isAdultVocabDifficulty(baseDifficulty) ? 'adultLevel5' : 'year6PlusPlus';
+    const maxRank = difficultyRank(maxDifficulty);
+    const rawRank = Math.min(clampDifficultyRank(baseRank + TOWER_DIFFICULTY_OFFSETS[difficulty]), maxRank);
     return RAW_DIFFICULTY_ORDER[rawRank];
 }
 
@@ -114,6 +134,10 @@ export function mapRawDifficultyToTowerDifficulty(
     difficulty: RawVocabDifficulty,
     baseDifficulty: BaseVocabDifficulty = 'reception',
 ): TowerDifficulty {
+    if (baseDifficulty === 'rupert') {
+        return 'easy';
+    }
+
     const rawRank = difficultyRank(difficulty);
     const baseRank = difficultyRank(baseDifficulty);
     const relativeIndex = Math.max(0, rawRank - baseRank);
@@ -133,14 +157,15 @@ export function normalizeVocab(
     entries: readonly WordEntry[] = ALL_VOCAB,
     baseDifficulty: BaseVocabDifficulty = 'reception',
 ): NormalizedVocabEntry[] {
-    const adultMode = isAdultVocabDifficulty(baseDifficulty);
+    const baseFamily = vocabFamily(baseDifficulty);
     return entries
-        .filter((entry) => isAdultVocabDifficulty(entry.difficulty) === adultMode)
+        .filter((entry) => vocabFamily(entry.difficulty) === baseFamily)
         .map((entry) => ({
             word: entry.word,
             definition: entry.definition,
             example: entry.example,
             difficulty: mapRawDifficultyToTowerDifficulty(entry.difficulty, baseDifficulty),
+            label: entry.difficulty === 'rupert' ? RAW_VOCAB_DIFFICULTY_LABELS[entry.difficulty] : undefined,
         }));
 }
 
@@ -210,6 +235,7 @@ export class VocabQuestionSystem {
         return {
             id: `${availableDifficulty}:${correct.word}:${Math.floor(this.rng.next() * 1000000)}`,
             difficulty: availableDifficulty,
+            label: correct.label,
             definition: correct.definition,
             example: correct.example,
             correctWord: correct.word,

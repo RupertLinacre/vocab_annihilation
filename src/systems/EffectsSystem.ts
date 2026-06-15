@@ -132,6 +132,9 @@ export class EffectsSystem {
             return;
         }
         for (const projectile of projectiles) {
+            if ((projectile.launchDelayMs ?? 0) > 0) {
+                continue;
+            }
             this.emitProjectileTrail(projectile, deltaMs);
         }
     }
@@ -326,6 +329,8 @@ export class EffectsSystem {
         switch (projectile.type) {
             case 'missile': {
                 const trailScale = projectile.trailScale ?? 1;
+                const exhaustColor = projectile.visualColor ?? 0xffe28a;
+                const smokeColor = projectile.smokeColor ?? 0xc8c2b6;
                 // Hot exhaust flame right at the nozzle.
                 this.spawn(
                     tailX,
@@ -335,7 +340,7 @@ export class EffectsSystem {
                     170 * trailScale,
                     4.2,
                     1.2,
-                    0xffe28a,
+                    exhaustColor,
                     0xff5a1a,
                     0.95,
                     0,
@@ -352,8 +357,8 @@ export class EffectsSystem {
                     560 * trailScale,
                     2.6,
                     8.5,
-                    0xc8c2b6,
-                    0x4a443d,
+                    smokeColor,
+                    0x171717,
                     0.5,
                     0,
                     1.6,

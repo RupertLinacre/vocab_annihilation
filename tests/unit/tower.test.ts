@@ -75,23 +75,33 @@ describe('tower target selection', () => {
         expect(calculateTotalTowerDamagePerSecond([wall, airstrike])).toBe(0);
     });
 
-    it('launches upgraded missile volleys on separate headings with upgrade-scaled trails', () => {
+    it('launches upgraded missile volleys with staggered rainbow missiles', () => {
         const grid = new Grid(6, 3, 'grass');
         const base = { x: 5, y: 1 };
         const flow = buildFlowField(grid, base, createEmptyCostGrid(grid));
         const target = createEnemy(1, 'grunt', cellCenter({ x: 3, y: 1 }, GAME_CONFIG.map).x, cellCenter({ x: 3, y: 1 }, GAME_CONFIG.map).y);
+        const baseTower: TowerState = { id: 3, gridX: 1, gridY: 1, type: 'missile', level: 1, cooldownMs: 0 };
         const tower: TowerState = { id: 1, gridX: 1, gridY: 1, type: 'missile', level: 3, cooldownMs: 0 };
 
+        const baseResult = new TowerSystem().update(0, [baseTower], [target], grid, GAME_CONFIG.map, flow);
         const result = new TowerSystem().update(0, [tower], [target], grid, GAME_CONFIG.map, flow);
 
+        expect(baseResult.projectiles[0].visualColor).toBe(0xb7bcc6);
         expect(result.projectiles).toHaveLength(2);
         expect(new Set(result.projectiles.map((projectile) => Math.atan2(projectile.vy, projectile.vx)))).toHaveLength(2);
         expect(result.projectiles.every((projectile) => projectile.homingDelayMs === 160)).toBe(true);
+        expect(result.projectiles.map((projectile) => projectile.launchDelayMs)).toEqual([0, 50]);
+        expect(new Set(result.projectiles.map((projectile) => projectile.turnRate))).toHaveLength(2);
+        expect(new Set(result.projectiles.map((projectile) => projectile.visualColor))).toHaveLength(2);
+        expect(new Set(result.projectiles.map((projectile) => projectile.smokeColor))).toHaveLength(2);
         expect(result.projectiles.every((projectile) => (projectile.trailScale ?? 0) > 1)).toBe(true);
 
         const maxTower: TowerState = { id: 2, gridX: 1, gridY: 1, type: 'missile', level: TOWER_STATS.missile.length, cooldownMs: 0 };
         const maxResult = new TowerSystem().update(0, [maxTower], [target], grid, GAME_CONFIG.map, flow);
         expect(maxResult.projectiles[0].trailScale).toBe(2);
+        expect(maxResult.projectiles[0].visualColor).toBe(0xff3b30);
+        expect(maxResult.projectiles[1].visualColor).toBe(0xff9500);
+        expect(maxResult.projectiles.map((projectile) => projectile.launchDelayMs)).toEqual([0, 50, 100, 150, 200, 250, 300, 350]);
     });
 
     it('detonates airstrikes with a 3x3 kill zone and map-wide falloff knockback', () => {
