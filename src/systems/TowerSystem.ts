@@ -7,6 +7,20 @@ import { createProjectile } from '../entities/Projectile';
 import { TOWER_STATS } from '../config/gameConfig';
 import { hasLineOfSight } from '../map/LineOfSight';
 
+const MISSILE_LAUNCH_STAGGER_MS = 50;
+const MISSILE_TURN_RATE_NOISE = 0.09;
+const MISSILE_BASE_COLOR = 0xb7bcc6;
+const MISSILE_VOLLEY_COLORS = [
+    0xff3b30,
+    0xff9500,
+    0xffcc00,
+    0x34c759,
+    0x00c7be,
+    0x007aff,
+    0x5856d6,
+    0xaf52de,
+] as const;
+
 export interface TowerUpdateResult {
     projectiles: ProjectileState[];
     shotsFired: number;
@@ -104,6 +118,42 @@ function missileUpgradeProgress(tower: TowerState): number {
     return clamp((tower.level - 1) / maxIndex, 0, 1);
 }
 
+function scaleColor(color: number, scale: number): number {
+    const r = Math.round(((color >> 16) & 0xff) * scale);
+    const g = Math.round(((color >> 8) & 0xff) * scale);
+    const b = Math.round((color & 0xff) * scale);
+    return (r << 16) | (g << 8) | b;
+}
+
+function blendColor(from: number, to: number, progress: number): number {
+    const t = clamp(progress, 0, 1);
+    const fromR = (from >> 16) & 0xff;
+    const fromG = (from >> 8) & 0xff;
+    const fromB = from & 0xff;
+    const toR = (to >> 16) & 0xff;
+    const toG = (to >> 8) & 0xff;
+    const toB = to & 0xff;
+    const r = Math.round(fromR + (toR - fromR) * t);
+    const g = Math.round(fromG + (toG - fromG) * t);
+    const b = Math.round(fromB + (toB - fromB) * t);
+    return (r << 16) | (g << 8) | b;
+}
+
+function missileVolleyColor(index: number, upgradeProgress: number): number {
+    const rainbowColor = MISSILE_VOLLEY_COLORS[index % MISSILE_VOLLEY_COLORS.length];
+    return blendColor(MISSILE_BASE_COLOR, rainbowColor, upgradeProgress);
+}
+
+function missileTurnRateWithNoise(baseTurnRate: number, index: number, count: number): number {
+    if (count <= 1) {
+        return baseTurnRate;
+    }
+
+    const middle = (count - 1) / 2;
+    const offset = (index - middle) / middle;
+    return baseTurnRate * (1 + offset * MISSILE_TURN_RATE_NOISE);
+}
+
 function angleDifference(a: number, b: number): number {
     let delta = a - b;
     while (delta > Math.PI) delta -= Math.PI * 2;
@@ -185,10 +235,14 @@ export class TowerSystem {
                 for (let index = 0; index < count; index += 1) {
                     const angle = baseAngle + (index - (count - 1) / 2) * spread;
                     const projectile = createProjectile(this.nextProjectileId++, 'missile', center.x, center.y, Math.cos(angle) * speed * 0.55, Math.sin(angle) * speed * 0.55, stats.damage, 6, 3600);
+                    const visualColor = missileVolleyColor(index, upgradeProgress);
                     projectile.targetId = target.id;
                     projectile.speed = speed;
-                    projectile.turnRate = stats.missileTurnRate ?? 2.3;
+                    projectile.turnRate = missileTurnRateWithNoise(stats.missileTurnRate ?? 2.3, index, count);
                     projectile.homingDelayMs = count > 1 ? 160 : 0;
+                    projectile.launchDelayMs = count > 1 ? index * MISSILE_LAUNCH_STAGGER_MS : 0;
+                    projectile.visualColor = visualColor;
+                    projectile.smokeColor = scaleColor(visualColor, 0.34);
                     projectile.trailScale = trailScale;
                     projectiles.push(projectile);
                 }

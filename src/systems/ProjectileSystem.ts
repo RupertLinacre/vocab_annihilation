@@ -125,18 +125,30 @@ export class ProjectileSystem {
         let deathSounds = 0;
 
         for (const projectile of projectiles) {
-            projectile.lifeMs -= deltaMs;
+            let activeDeltaMs = deltaMs;
+            if ((projectile.launchDelayMs ?? 0) > 0) {
+                activeDeltaMs = Math.max(0, deltaMs - (projectile.launchDelayMs ?? 0));
+                projectile.launchDelayMs = Math.max(0, (projectile.launchDelayMs ?? 0) - deltaMs);
+                projectile.previousX = projectile.x;
+                projectile.previousY = projectile.y;
+                if (activeDeltaMs <= 0) {
+                    aliveProjectiles.push(projectile);
+                    continue;
+                }
+            }
+
+            projectile.lifeMs -= activeDeltaMs;
             projectile.previousX = projectile.x;
             projectile.previousY = projectile.y;
             if (projectile.type === 'missile') {
                 if ((projectile.homingDelayMs ?? 0) > 0) {
-                    projectile.homingDelayMs = Math.max(0, (projectile.homingDelayMs ?? 0) - deltaMs);
+                    projectile.homingDelayMs = Math.max(0, (projectile.homingDelayMs ?? 0) - activeDeltaMs);
                 } else {
-                    this.updateMissileVelocity(projectile, enemies, deltaMs);
+                    this.updateMissileVelocity(projectile, enemies, activeDeltaMs);
                 }
             }
-            projectile.x += projectile.vx * (deltaMs / 1000);
-            projectile.y += projectile.vy * (deltaMs / 1000);
+            projectile.x += projectile.vx * (activeDeltaMs / 1000);
+            projectile.y += projectile.vy * (activeDeltaMs / 1000);
 
             if (projectile.lifeMs <= 0) {
                 continue;

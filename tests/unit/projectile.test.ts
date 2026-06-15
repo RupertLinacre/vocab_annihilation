@@ -42,4 +42,25 @@ describe('projectile tree collisions', () => {
 
         expect(result.projectiles).toHaveLength(0);
     });
+
+    it('keeps delayed missiles inactive until their launch delay has elapsed', () => {
+        const grid = new Grid(5, 3, 'grass');
+        const start = cellCenter({ x: 1, y: 1 }, GAME_CONFIG.map);
+        const missile = createProjectile(1, 'missile', start.x, start.y, 100, 0, 10, 6, 1000);
+        missile.launchDelayMs = 50;
+
+        const waiting = new ProjectileSystem().update(30, [missile], [], grid, GAME_CONFIG.map);
+
+        expect(waiting.projectiles).toHaveLength(1);
+        expect(waiting.projectiles[0].x).toBe(start.x);
+        expect(waiting.projectiles[0].lifeMs).toBe(1000);
+        expect(waiting.projectiles[0].launchDelayMs).toBe(20);
+
+        const launched = new ProjectileSystem().update(30, waiting.projectiles, [], grid, GAME_CONFIG.map);
+
+        expect(launched.projectiles).toHaveLength(1);
+        expect(launched.projectiles[0].x).toBeCloseTo(start.x + 1);
+        expect(launched.projectiles[0].lifeMs).toBe(990);
+        expect(launched.projectiles[0].launchDelayMs).toBe(0);
+    });
 });

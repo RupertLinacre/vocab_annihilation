@@ -80,6 +80,9 @@ export interface ProjectileState {
     turnRate?: number;
     speed?: number;
     homingDelayMs?: number;
+    launchDelayMs?: number;
+    visualColor?: number;
+    smokeColor?: number;
     trailScale?: number;
     explosionRadius?: number;
     fragmentCount?: number;

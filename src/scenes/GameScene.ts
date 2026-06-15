@@ -1180,9 +1180,15 @@ export class GameScene extends Phaser.Scene {
 
     private renderProjectiles(): void {
         for (const projectile of this.projectiles) {
+            if ((projectile.launchDelayMs ?? 0) > 0) {
+                continue;
+            }
             if (projectile.type === 'missile') {
                 const angle = Math.atan2(projectile.vy, projectile.vx);
-                this.graphics.fillStyle(0xbde0fe, 1);
+                const color = projectile.visualColor ?? 0xbde0fe;
+                this.graphics.fillStyle(color, 0.22);
+                this.graphics.fillCircle(projectile.x, projectile.y, projectile.radius * 2.1);
+                this.graphics.fillStyle(color, 1);
                 this.graphics.save();
                 this.graphics.translateCanvas(projectile.x, projectile.y);
                 this.graphics.rotateCanvas(angle);
