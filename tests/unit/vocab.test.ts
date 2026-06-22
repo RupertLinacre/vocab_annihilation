@@ -232,11 +232,15 @@ describe('vocabulary questions and upgrades', () => {
             'ramshackle',
             'regal',
             'serenade',
+            'sincere',
             'sinister',
             'subterfuge',
             'tenacity',
             'unlimited',
             'unspeakable',
+            'wavered',
+            'wise',
+            'withdraw',
         ]);
         expect(new Set(rupertEntries.map((entry) => entry.label))).toEqual(new Set(['Rupert']));
 
