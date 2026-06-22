@@ -219,6 +219,7 @@ describe('vocabulary questions and upgrades', () => {
             'gargoyle',
             'hostile',
             'inspiration',
+            'intransigent',
             'inverted',
             'irresponsible',
             'ivory',
